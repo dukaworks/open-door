@@ -10,6 +10,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserMenu } from "@/components/UserMenu";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -25,7 +28,7 @@ import {
   CheckCircle2,
   Play,
 } from "lucide-react";
-import { settingsApi, healthApi, ApiKeysStatus } from "@/lib/api";
+import { settingsApi, healthApi, userApi, ApiKeysStatus } from "@/lib/api";
 
 interface ApiField {
   id: string;
@@ -157,7 +160,11 @@ const DEFAULT_FIELDS: ApiField[] = [
   },
 ];
 
-export default function Settings() {
+interface SettingsProps {
+  embedded?: boolean;
+}
+
+export default function Settings({ embedded = false }: SettingsProps) {
   const [fields, setFields] = useState<ApiField[]>(DEFAULT_FIELDS);
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
   const [expandedCategories, setExpandedCategories] = useState<
@@ -318,32 +325,33 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "oklch(0.955 0.012 240)" }}>
-      {/* Top nav */}
-      <header className="bg-white border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/studio">
-            <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft size={16} />
-              返回工作台
-            </button>
-          </Link>
-          <div className="w-px h-4 bg-border" />
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "oklch(0.22 0.06 250)" }}
-            >
-              <Zap size={14} className="text-white" />
+    <div className={embedded ? "" : "min-h-screen bg-background"}>
+      {/* Top nav - hide when embedded */}
+      {!embedded && (
+        <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <Link to="/studio">
+              <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowLeft size={16} />
+                返回工作台
+              </button>
+            </Link>
+            <div className="w-px h-4 bg-border" />
+            <div className="flex items-center gap-2">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center"
+                style={{ background: "var(--primary)" }}
+              >
+                <Zap size={14} className="text-white" />
+              </div>
+              <span
+                style={{ fontFamily: "'Playfair Display', serif" }}
+                className="font-semibold text-foreground"
+              >
+                API 连接器
+              </span>
             </div>
-            <span
-              style={{ fontFamily: "'Playfair Display', serif" }}
-              className="font-semibold text-foreground"
-            >
-              API 连接器
-            </span>
           </div>
-        </div>
         <div className="flex items-center gap-3">
           {/* 后端状态指示 */}
           {loadingStatus ? (
@@ -362,10 +370,11 @@ export default function Settings() {
               后端未连接
             </div>
           )}
+          <UserMenu />
           <Button
             onClick={handleSave}
             disabled={saving || !backendOnline}
-            style={{ background: "oklch(0.22 0.06 250)" }}
+            style={{ background: "var(--primary)" }}
             className="gap-2"
           >
             {saving ? (
@@ -376,9 +385,10 @@ export default function Settings() {
             保存配置
           </Button>
         </div>
-      </header>
+        </header>
+      )}
 
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className={embedded ? "p-4" : "max-w-3xl mx-auto px-6 py-8"}>
         <div className="mb-8">
           <h1
             style={{ fontFamily: "'Playfair Display', serif" }}
@@ -416,7 +426,7 @@ export default function Settings() {
         )}
 
         {/* LLM 提供商选择 */}
-        <div className="bg-white rounded-xl border border-border p-5 mb-4">
+        <div className="bg-card rounded-xl border border-border p-5 mb-4">
           <h3 className="text-sm font-semibold text-foreground mb-3">
             默认 LLM 提供商
           </h3>
@@ -454,7 +464,7 @@ export default function Settings() {
             return (
               <div
                 key={cat}
-                className="bg-white rounded-xl border border-border overflow-hidden"
+                className="bg-card rounded-xl border border-border overflow-hidden"
               >
                 <button
                   onClick={() => toggleCategory(cat)}
@@ -566,7 +576,7 @@ export default function Settings() {
                                   }
                                   className="sr-only peer"
                                 />
-                                <div className="w-9 h-5 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" />
+                                <div className="w-9 h-5 bg-secondary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" />
                               </label>
                             </div>
                           </div>

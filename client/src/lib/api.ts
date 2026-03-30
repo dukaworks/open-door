@@ -174,9 +174,20 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
+  
+  // 获取 token
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
   const res = await fetch(url, {
     headers: {
-      "Content-Type": "application/json",
+      ...headers,
       ...options.headers,
     },
     ...options,
@@ -266,9 +277,18 @@ export const uploadApi = {
     const formData = new FormData();
     formData.append("file", file);
     const url = `${API_BASE}/api/upload/reference`;
+    
+    // 获取 token
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(url, {
       method: "POST",
       body: formData,
+      headers,
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: res.statusText }));
@@ -286,9 +306,18 @@ export const analyzeApi = {
     const formData = new FormData();
     formData.append("file", file);
     const url = `${API_BASE}/api/analyze/upload`;
+    
+    // 获取 token
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(url, {
       method: "POST",
       body: formData,
+      headers,
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: res.statusText }));
@@ -383,6 +412,73 @@ export const settingsApi = {
       method: "POST",
       body: JSON.stringify({ service }),
     }),
+};
+
+// ─── User Profile API ─────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  avatar_url?: string;
+  created_at: string;
+  is_admin: boolean;
+}
+
+export interface UserPreferences {
+  language: string;
+  theme: string;
+}
+
+export const userApi = {
+  /** 获取当前用户信息 */
+  getProfile: () => request<UserProfile>("/api/auth/me"),
+
+  /** 更新用户信息 */
+  updateProfile: (data: { username?: string; email?: string; avatar_url?: string }) =>
+    request<UserProfile>("/api/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  /** 修改密码 */
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<{ message: string }>("/api/auth/password", {
+      method: "POST",
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
+
+  /** 获取用户偏好设置 */
+  getPreferences: () => request<UserPreferences>("/api/auth/preferences"),
+
+  /** 更新用户偏好设置 */
+  updatePreferences: (data: { language?: string; theme?: string }) =>
+    request<UserPreferences>("/api/auth/preferences", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  /** 上传头像 */
+  uploadAvatar: async (file: File): Promise<{ path: string; filename: string; message: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token");
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const url = `${API_BASE}/api/auth/avatar`;
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+      headers,
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(error.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  },
 };
 
 // ─── Health API ───────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 /**
- * Studio.tsx — 噼哩噼哩 主工作台 v2.1
+ * Studio.tsx — 芝麻开门 主工作台 v2.1
  *
  * 设计：保持原有 Seedance 浅色风格（soft blue-grey bg, white cards, serif headings）
  * 功能布局参考 Kling Omni：
@@ -18,16 +18,17 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/UserMenu";
+import { useAuth } from "@/contexts/AuthContext";
+import DebugPanel from "@/components/DebugPanel";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Film,
-  Home,
-  Settings,
   History,
   Sparkles,
   Send,
@@ -182,33 +183,31 @@ function SidebarNav({
   onSelectProject: (id: string) => void;
 }) {
   const navItems = [
-    { icon: Home, label: "首页", href: "/" },
     { icon: Film, label: "工作台", href: "/studio", active: true },
-    { icon: Settings, label: "设置", href: "/settings" },
   ];
 
   return (
     <aside
-      className="flex flex-col border-r border-border bg-white transition-all duration-300 shrink-0 h-screen"
+      className="flex flex-col border-r border-border bg-card transition-all duration-300 shrink-0 h-screen"
       style={{ width: collapsed ? 64 : 220 }}
     >
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-border">
-        <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.06 250)" }}>
-          <Zap size={16} className="text-white" />
+      <button onClick={() => setLocation("/")} className="flex items-center gap-3 px-4 py-5 border-b border-border hover:bg-secondary transition-colors cursor-pointer w-full no-underline">
+        <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+          <Zap size={16} className="text-primary-foreground" />
         </div>
         {!collapsed && (
           <div>
-            <div className="text-sm font-semibold leading-tight" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.22 0.06 250)" }}>
-              噼哩噼哩
+            <div className="text-sm font-semibold leading-tight text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+              芝麻开门
             </div>
             <div className="text-xs text-muted-foreground leading-tight">AutoVideo</div>
           </div>
         )}
-      </div>
+      </button>
 
       <nav className="flex-1 py-3 overflow-y-auto">
         {navItems.map((item) => (
-          <Link key={item.label} href={item.href}>
+          <Link key={item.label} to={item.href}>
             <div className={`flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg mb-0.5 transition-colors cursor-pointer ${
               item.active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             }`}>
@@ -235,6 +234,11 @@ function SidebarNav({
           </div>
         )}
       </nav>
+
+      {/* 用户菜单 - 底部，与导航菜单风格一致 */}
+      <div className="px-2 py-2 border-t border-border">
+        <UserMenu collapsed={collapsed} />
+      </div>
 
       <div className="p-3 border-t border-border">
         <button onClick={onToggle} className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
@@ -285,7 +289,7 @@ function CharacterRail({
   };
 
   return (
-    <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-white overflow-x-auto shrink-0">
+    <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-card overflow-x-auto shrink-0">
       {/* 添加按钮 */}
       <div className="relative shrink-0" ref={menuRef}>
         <button
@@ -303,7 +307,7 @@ function CharacterRail({
           )}
         </button>
         {menuOpen && (
-          <div className="absolute top-16 left-0 z-50 bg-white border border-border rounded-xl shadow-lg py-1 w-52">
+          <div className="absolute top-16 left-0 z-50 bg-card border border-border rounded-xl shadow-lg py-1 w-52">
             <label className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary cursor-pointer transition-colors">
               <Image size={14} className="text-muted-foreground" />
               上传图片（可多选）
@@ -334,7 +338,7 @@ function CharacterRail({
           >
             <X size={10} />
           </button>
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white border border-border rounded-full px-1.5 py-0 text-[9px] text-muted-foreground whitespace-nowrap">
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-card border border-border rounded-full px-1.5 py-0 text-[9px] text-muted-foreground whitespace-nowrap">
             {ref.type === "video_frame" ? "截帧" : `图${idx + 1}`}
           </div>
         </div>
@@ -390,7 +394,7 @@ function BottomToolbar({
   const currentEngine = ENGINE_OPTIONS.find(e => e.value === engine) || ENGINE_OPTIONS[0];
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-t border-border bg-white flex-wrap shrink-0">
+    <div className="flex items-center gap-2 px-4 py-2.5 border-t border-border bg-card flex-wrap shrink-0">
       {/* 引擎选择 */}
       <div className="relative" ref={engineRef}>
         <button
@@ -402,7 +406,7 @@ function BottomToolbar({
           <ChevronDown size={11} className="text-muted-foreground" />
         </button>
         {engineOpen && (
-          <div className="absolute bottom-10 left-0 z-50 bg-white border border-border rounded-xl shadow-lg py-1 w-52">
+          <div className="absolute bottom-10 left-0 z-50 bg-card border border-border rounded-xl shadow-lg py-1 w-52">
             {ENGINE_OPTIONS.map(opt => (
               <button
                 key={opt.value}
@@ -431,7 +435,7 @@ function BottomToolbar({
           <ChevronDown size={11} className="text-muted-foreground" />
         </button>
         {resOpen && (
-          <div className="absolute bottom-10 left-0 z-50 bg-white border border-border rounded-xl shadow-lg py-1 w-32">
+          <div className="absolute bottom-10 left-0 z-50 bg-card border border-border rounded-xl shadow-lg py-1 w-32">
             {(["720p", "1080p"] as const).map(r => (
               <button
                 key={r}
@@ -505,14 +509,14 @@ function SceneCard({
   const shotBadge = scene.shot_mode ? SHOT_MODE_BADGE[scene.shot_mode] : null;
 
   return (
-    <div className="rounded-xl border border-border bg-white overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div
         className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-secondary/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2">
           <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white shrink-0"
-            style={{ background: "oklch(0.42 0.12 255)", fontSize: "10px" }}>
+            style={{ background: "var(--accent)", fontSize: "10px" }}>
             {scene.scene_id}
           </span>
           <span className="text-xs font-medium text-foreground">分镜 {scene.scene_id}</span>
@@ -583,16 +587,16 @@ function SceneReviewPanel({
   onCancel: () => void;
 }) {
   return (
-    <div className="border-t border-border bg-white shrink-0">
+    <div className="border-t border-border bg-card shrink-0">
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Pencil size={14} style={{ color: "oklch(0.42 0.12 255)" }} />
+          <Pencil size={14} style={{ color: "var(--accent-muted-foreground)" }} />
           <span className="text-sm font-semibold text-foreground">分镜审核 · {scenes.length} 个分镜</span>
           <span className="text-xs text-muted-foreground">总时长约 {scenes.reduce((s, sc) => s + sc.duration, 0)}s · 点击展开编辑</span>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onCancel} className="text-xs gap-1.5"><X size={12} />取消</Button>
-          <Button size="sm" onClick={onApprove} className="text-xs gap-1.5" style={{ background: "oklch(0.22 0.06 250)" }}>
+          <Button size="sm" onClick={onApprove} className="text-xs gap-1.5" style={{ background: "var(--primary)" }}>
             <CheckCircle2 size={12} />确认，开始生成
           </Button>
         </div>
@@ -668,11 +672,11 @@ function CharacterReplaceCard({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-white p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-            style={{ background: "oklch(0.42 0.12 255)" }}>
+            style={{ background: "var(--accent)" }}>
             {character.character_id}
           </div>
           <span className="text-sm font-semibold text-foreground">{character.name}</span>
@@ -722,7 +726,7 @@ function CharacterReplaceCard({
               autoFocus
             />
             <div className="flex gap-2">
-              <Button size="sm" className="flex-1 text-xs h-7" onClick={handlePromptSave} style={{ background: "oklch(0.22 0.06 250)" }}>
+              <Button size="sm" className="flex-1 text-xs h-7" onClick={handlePromptSave} style={{ background: "var(--primary)" }}>
                 <Check size={11} className="mr-1" />保存
               </Button>
               <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={() => { setLocalPrompt(character.appearance_prompt); setEditingPrompt(false); }}>
@@ -776,7 +780,7 @@ function ScenePromptRow({
   const shotBadge = SHOT_MODE_BADGE[scene.shot_mode];
 
   return (
-    <div className="rounded-xl border border-border bg-white overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-secondary/50 transition-colors text-left"
@@ -1002,11 +1006,11 @@ function AnalysisPanel({
   const result = editableResult;
 
   return (
-    <aside className="w-96 border-l border-border bg-white flex flex-col shrink-0 h-screen" style={{ minHeight: 0 }}>
+    <aside className="w-96 border-l border-border bg-card flex flex-col shrink-0 h-screen" style={{ minHeight: 0 }}>
       {/* 头部 */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
-          <ScanSearch size={15} style={{ color: "oklch(0.42 0.12 255)" }} />
+          <ScanSearch size={15} style={{ color: "var(--accent-muted-foreground)" }} />
           <span className="text-sm font-semibold text-foreground">对标视频分析</span>
           {analysisData?.status === "processing" && (
             <span className="flex items-center gap-1 text-xs text-blue-500">
@@ -1046,8 +1050,8 @@ function AnalysisPanel({
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "oklch(0.94 0.03 250)" }}>
-                    <Upload size={24} style={{ color: "oklch(0.42 0.12 255)" }} />
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--accent-muted)" }}>
+                    <Upload size={24} style={{ color: "var(--accent-muted-foreground)" }} />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground mb-1">上传对标视频</p>
@@ -1130,7 +1134,7 @@ function AnalysisPanel({
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      activeTab === tab ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      activeTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {tab === "characters" ? `人物 (${result.characters.length})` : tab === "scenes" ? `分镜 (${result.scenes.length})` : "整体"}
@@ -1196,7 +1200,7 @@ function AnalysisPanel({
               {/* 一键创建项目（使用编辑后的数据） */}
               <Button
                 className="w-full gap-2"
-                style={{ background: "oklch(0.22 0.06 250)" }}
+                style={{ background: "var(--primary)" }}
                 onClick={() => {
                   const finalResult = {
                     ...result,
@@ -1279,7 +1283,7 @@ function AgentConsole({
 
   if (collapsed) {
     return (
-      <div className="w-12 border-l border-border bg-white flex flex-col items-center py-4 gap-3 shrink-0">
+      <div className="w-12 border-l border-border bg-card flex flex-col items-center py-4 gap-3 shrink-0">
         <button onClick={onToggle} className="p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" title="展开控制台">
           <ChevronLeft size={16} />
         </button>
@@ -1291,7 +1295,7 @@ function AgentConsole({
   }
 
   return (
-    <aside className="w-72 border-l border-border bg-white flex flex-col shrink-0 h-screen" style={{ minHeight: 0 }}>
+    <aside className="w-72 border-l border-border bg-card flex flex-col shrink-0 h-screen" style={{ minHeight: 0 }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${
@@ -1310,9 +1314,9 @@ function AgentConsole({
           <span className="text-xs font-medium text-foreground">{STAGE_LABELS[stage]}</span>
           <span className="text-xs text-muted-foreground font-mono">{STAGE_PROGRESS[stage]}%</span>
         </div>
-        <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
           <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${STAGE_PROGRESS[stage]}%`, background: stage === "failed" ? "oklch(0.60 0.20 30)" : "oklch(0.60 0.20 255)" }} />
+            style={{ width: `${STAGE_PROGRESS[stage]}%`, background: stage === "failed" ? "var(--destructive)" : "var(--accent)" }} />
         </div>
         <div className="mt-3 space-y-1">
           {stageSteps.map((step) => {
@@ -1320,11 +1324,11 @@ function AgentConsole({
             const isDone = currentIdx > stepIdx;
             const isCurrent = currentIdx === stepIdx;
             return (
-              <div key={step.key} className={`flex items-center gap-2 py-0.5 ${isDone || isCurrent ? "opacity-100" : "opacity-30"}`}>
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isDone ? "bg-emerald-100" : isCurrent ? "bg-blue-100" : "bg-secondary"}`}>
-                  {isDone ? <CheckCircle2 size={10} className="text-emerald-600" /> : isCurrent ? <Loader2 size={10} className="text-blue-500 animate-spin" /> : <step.icon size={10} className="text-muted-foreground" />}
+              <div key={step.key} className="flex items-center gap-2 py-0.5">
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isDone ? "bg-emerald-500" : isCurrent ? "bg-blue-500" : "bg-muted"}`}>
+                  {isDone ? <CheckCircle2 size={10} className="text-white" /> : isCurrent ? <Loader2 size={10} className="text-white animate-spin" /> : <step.icon size={10} className="text-muted-foreground" />}
                 </div>
-                <span className={`text-xs ${isCurrent ? "text-foreground font-medium" : "text-muted-foreground"}`}>{step.label}</span>
+                <span className={`text-xs ${isCurrent ? "text-foreground font-medium" : ""}`} style={{ color: isCurrent ? "var(--foreground)" : "var(--muted-foreground)" }}>{step.label}</span>
               </div>
             );
           })}
@@ -1370,7 +1374,7 @@ function AgentConsole({
             </div>
           )}
           {feedbackGiven && <p className="text-xs text-center text-emerald-600">✓ 评分已记录</p>}
-          <Button className="w-full gap-2 text-sm" onClick={onDownload} style={{ background: "oklch(0.22 0.06 250)" }}>
+          <Button className="w-full gap-2 text-sm" onClick={onDownload} style={{ background: "var(--primary)" }}>
             <Download size={14} />下载成片 MP4
           </Button>
           <Button variant="outline" className="w-full gap-2 text-sm" onClick={onExportDraft}>
@@ -1403,6 +1407,8 @@ function AgentConsole({
 // ─── 主页面 ────────────────────────────────────────────────────────────────────
 export default function Studio() {
   const params = useParams<{ projectId?: string }>();
+  const [, setLocation] = useLocation();
+  const { isAdmin, authEnabled } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [analysisPanelOpen, setAnalysisPanelOpen] = useState(false);
@@ -1411,7 +1417,7 @@ export default function Studio() {
   const [backendOnline, setBackendOnline] = useState(false);
 
   // ─── localStorage 对话持久化 ─────────────────────────────────────────────────
-  const CHAT_KEY = (pid: string) => `pilipili_chat_${pid}`;
+  const CHAT_KEY = (pid: string) => `opendoor_chat_${pid}`;
 
   const saveMsgsToStorage = useCallback((pid: string, msgs: ChatMessage[]) => {
     try {
@@ -1450,7 +1456,7 @@ export default function Studio() {
       if (pid) {
         try {
           const serializable = updated.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
-          localStorage.setItem(`pilipili_chat_${pid}`, JSON.stringify(serializable));
+          localStorage.setItem(`opendoor_chat_${pid}`, JSON.stringify(serializable));
         } catch { /* 静默处理 */ }
       }
       return updated;
@@ -1593,7 +1599,7 @@ export default function Studio() {
   const isGenerating = workflow.stage !== "idle" && workflow.stage !== "awaiting_review" && workflow.stage !== "completed" && workflow.stage !== "failed";
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "oklch(0.955 0.012 240)" }}>
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* 左侧导航 */}
       <SidebarNav
         collapsed={sidebarCollapsed}
@@ -1616,7 +1622,7 @@ export default function Studio() {
       {/* 中间主区 */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 顶部标题栏 */}
-        <div className="px-6 py-3 border-b border-border bg-white flex items-center justify-between shrink-0">
+        <div className="px-6 py-3 border-b border-border bg-card flex items-center justify-between shrink-0">
           <div>
             <h2 style={{ fontFamily: "'Playfair Display', serif" }} className="text-lg font-semibold text-foreground">创作工作台</h2>
             <p className="text-xs text-muted-foreground mt-0.5">输入创意，AI 全自动完成脚本·配音·视频·成片</p>
@@ -1631,7 +1637,7 @@ export default function Studio() {
                 <Button size="sm" variant="outline" onClick={() => { submitReview(false); addChatMessage("assistant", "已取消。"); }} className="gap-1.5 text-xs">
                   <X size={12} />取消
                 </Button>
-                <Button size="sm" onClick={() => submitReview(true)} className="gap-1.5 text-xs" style={{ background: "oklch(0.22 0.06 250)" }}>
+                <Button size="sm" onClick={() => submitReview(true)} className="gap-1.5 text-xs" style={{ background: "var(--primary)" }}>
                   <CheckCircle2 size={12} />确认脚本，开始生成
                 </Button>
               </div>
@@ -1651,8 +1657,8 @@ export default function Studio() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-full py-12 px-6">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: "oklch(0.94 0.03 250)" }}>
-                <Sparkles size={28} style={{ color: "oklch(0.42 0.12 255)" }} />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: "var(--accent-muted)" }}>
+                <Sparkles size={28} style={{ color: "var(--accent-muted-foreground)" }} />
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
                 开始创作你的视频
@@ -1666,9 +1672,9 @@ export default function Studio() {
                   { icon: ScanSearch, title: "对标视频分析", desc: "上传参考视频，反推提示词+人物替换" },
                   { icon: Layers, title: "Multi-Shot 模式", desc: "Kling Omni 多分镜连贯生成" },
                 ].map(f => (
-                  <div key={f.title} className="p-4 rounded-xl border border-border bg-white text-center hover:shadow-sm transition-shadow">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "oklch(0.94 0.03 250)" }}>
-                      <f.icon size={18} style={{ color: "oklch(0.42 0.12 255)" }} />
+                  <div key={f.title} className="p-4 rounded-xl border border-border bg-card text-center hover:shadow-sm transition-shadow">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "var(--accent-muted)" }}>
+                      <f.icon size={18} style={{ color: "var(--accent-muted-foreground)" }} />
                     </div>
                     <div className="text-xs font-semibold text-foreground mb-1">{f.title}</div>
                     <div className="text-xs text-muted-foreground leading-relaxed">{f.desc}</div>
@@ -1685,7 +1691,7 @@ export default function Studio() {
                   </div>
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      msg.role === "user" ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-white text-foreground rounded-tl-sm border border-border"
+                      msg.role === "user" ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-card text-foreground rounded-tl-sm border border-border"
                     }`}
                     style={{ whiteSpace: "pre-wrap" }}
                   >
@@ -1709,7 +1715,7 @@ export default function Studio() {
         )}
 
         {/* 输入区 */}
-        <div className="px-6 py-4 border-t border-border bg-white shrink-0">
+        <div className="px-6 py-4 border-t border-border bg-card shrink-0">
           <div className="flex items-end gap-3">
             <Textarea
               value={input}
@@ -1724,7 +1730,7 @@ export default function Studio() {
               onClick={handleSend}
               disabled={!input.trim() || isGenerating}
               className="h-14 w-14 shrink-0 rounded-xl"
-              style={{ background: "oklch(0.22 0.06 250)" }}
+              style={{ background: "var(--primary)" }}
             >
               {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
             </Button>
@@ -1787,6 +1793,8 @@ export default function Studio() {
           }
         } : undefined}
       />
+      {/* 只有管理员才能看到调试面板（单用户模式也显示） */}
+      {(isAdmin || !authEnabled) && <DebugPanel />}
     </div>
   );
 }
