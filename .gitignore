@@ -100,6 +100,12 @@ jspm_packages/
 tmp/
 temp/
 
+# Python cache
+**/__pycache__/
+*.pyc
+*.pyo
+.ruff_cache/
+
 # Database
 *.db
 *.sqlite
