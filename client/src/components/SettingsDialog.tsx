@@ -244,10 +244,10 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
-      <DialogContent className="max-w-5xl h-[85vh] bg-card p-0">
+      <DialogContent className="max-w-[1400px] h-[90vh] bg-card p-0">
         <div className="flex h-full">
           {/* 侧边栏 */}
-          <div className="w-48 border-r bg-muted/20 p-4 flex flex-col gap-2">
+          <div className="w-56 border-r bg-muted/20 p-4 flex flex-col gap-2">
             <div className="text-sm font-medium text-muted-foreground mb-2">
               设置
             </div>
