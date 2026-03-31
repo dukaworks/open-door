@@ -65,6 +65,7 @@ from modules.jianying_draft import generate_jianying_draft
 from modules.memory import get_memory_manager
 from api.auth import router as auth_router, get_current_user, TokenData
 import api.config_db as config_db_module
+from api.config_api_v3 import router as config_v3_router
 
 # 确保初始化
 config_db_module.init_config_db()
@@ -90,6 +91,9 @@ app.add_middleware(
 
 # 注册认证路由
 app.include_router(auth_router)
+
+# 注册配置管理 V3 路由
+app.include_router(config_v3_router)
 
 # 静态文件：用户头像
 DATA_DIR = os.path.join(
