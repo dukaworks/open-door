@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import Profile from "@/pages/Profile";
 import { SettingsDialog } from "./SettingsDialog";
@@ -31,6 +32,11 @@ export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
           className="!max-w-[1400px] !w-[1400px] !h-[90vh] !p-0 bg-card"
           style={{ maxWidth: "1400px", width: "1400px", height: "90vh" }}
         >
+          {/* 隐藏的标题和描述，用于无障碍访问 */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>系统设置</DialogTitle>
+            <DialogDescription>配置服务商、套餐和系统选项</DialogDescription>
+          </DialogHeader>
           <SettingsDialog open={true} onClose={onClose} />
         </DialogContent>
       </Dialog>
@@ -41,6 +47,10 @@ export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
         onOpenChange={isOpen => !isOpen && onClose()}
       >
         <DialogContent className="max-w-2xl h-[50vh] bg-card">
+          <DialogHeader className="sr-only">
+            <DialogTitle>用户中心</DialogTitle>
+            <DialogDescription>管理个人信息和账号设置</DialogDescription>
+          </DialogHeader>
           <Profile embedded={true} onSaved={onClose} />
         </DialogContent>
       </Dialog>

@@ -117,7 +117,20 @@ const SERVICE_ICONS: Record<string, string> = {
   memory: "🧠",
 };
 
-const API_BASE = "/api/v3";
+// API 基础 URL（与 api.ts 保持一致）
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+// 获取认证头
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 // ============================================================
 // 主组件
@@ -182,7 +195,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   const loadProviders = async () => {
     try {
-      const res = await fetch(`${API_BASE}/providers`);
+      const res = await fetch(`${API_BASE}/api/v3/providers`, {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("加载服务商失败");
       const data = await res.json();
       setProviders(data);
@@ -199,7 +214,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   const loadPackages = async () => {
     try {
-      const res = await fetch(`${API_BASE}/packages`);
+      const res = await fetch(`${API_BASE}/api/v3/packages`, {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("加载套餐失败");
       const data = await res.json();
       setPackages(data);
@@ -211,7 +228,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   const loadUserConfig = async () => {
     try {
-      const res = await fetch(`${API_BASE}/user/config`);
+      const res = await fetch(`${API_BASE}/api/v3/user/config`, {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("加载用户配置失败");
       const data = await res.json();
       setUserConfig(data);
@@ -223,7 +242,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   const loadSystemSettings = async () => {
     try {
-      const res = await fetch(`${API_BASE}/system/settings`);
+      const res = await fetch(`${API_BASE}/api/v3/system/settings`, {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("加载系统设置失败");
       const data = await res.json();
       setSystemSettings(data);
@@ -235,7 +256,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const loadModels = async (providerId: string) => {
     setLoadingModels(true);
     try {
-      const res = await fetch(`${API_BASE}/providers/${providerId}/models`);
+      const res = await fetch(`${API_BASE}/api/v3/providers/${providerId}/models`, {
+        headers: getAuthHeaders(),
+      });
       if (!res.ok) throw new Error("加载模型失败");
       const data = await res.json();
       setModels(data);
@@ -254,9 +277,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const handleApplyPackage = async (pkg: Package) => {
     setApplyingPackage(pkg.id);
     try {
-      const res = await fetch(`${API_BASE}/user/config/apply-package`, {
+      const res = await fetch(`${API_BASE}/api/v3/user/config/apply-package`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ package_id: pkg.id }),
       });
       if (!res.ok) throw new Error("应用套餐失败");
@@ -285,10 +308,10 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setSaving(true);
     try {
       const res = await fetch(
-        `${API_BASE}/providers/${selectedProvider.id}/config`,
+        `${API_BASE}/api/v3/providers/${selectedProvider.id}/config`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             api_key: formData.api_key || undefined,
             api_secret: formData.api_secret || undefined,
@@ -313,8 +336,11 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setTestResult(null);
     try {
       const res = await fetch(
-        `${API_BASE}/providers/${selectedProvider.id}/test`,
-        { method: "POST" }
+        `${API_BASE}/api/v3/providers/${selectedProvider.id}/test`,
+        { 
+          method: "POST",
+          headers: getAuthHeaders(),
+        }
       );
       const data = await res.json();
       setTestResult(data);
@@ -336,9 +362,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     value: unknown
   ) => {
     try {
-      const res = await fetch(`${API_BASE}/system/settings/${key}`, {
+      const res = await fetch(`${API_BASE}/api/v3/system/settings/${key}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ value }),
       });
       if (!res.ok) throw new Error("更新失败");
