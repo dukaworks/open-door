@@ -1,23 +1,14 @@
 /*
- * SettingsDialog.tsx - 独立设置对话框组件
+ * SettingsDialog.tsx - 独立设置对话框内容组件
  * 侧边栏 + 工作区布局，支持套餐选择和提供商配置
+ * 不包含 Dialog 包装，由 StudioDialogs.tsx 控制
  */
 
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -26,16 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  Loader2,
-  Check,
-  X,
-  RefreshCw,
-  Plus,
-  Trash2,
-  ExternalLink,
-} from "lucide-react";
+import { Loader2, Check, X, RefreshCw } from "lucide-react";
 
 // 类型定义
 interface Provider {
@@ -75,7 +60,7 @@ interface SettingsDialogProps {
   onClose: () => void;
 }
 
-// 服务类型映射（用户能看懂的名称）
+// 服务类型映射
 const SERVICE_NAMES: Record<string, string> = {
   llm: "文案大脑",
   image: "图片生成",
@@ -242,319 +227,311 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     return providers.filter(p => typeMap[serviceType]?.includes(p.id));
   };
 
+  // 只返回内容部分，不包含 Dialog 包装
   return (
-    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
-      <DialogContent className="max-w-[1400px] h-[90vh] bg-card p-0">
-        <div className="flex h-full">
-          {/* 侧边栏 */}
-          <div className="w-56 border-r bg-muted/20 p-4 flex flex-col gap-2">
-            <div className="text-sm font-medium text-muted-foreground mb-2">
-              设置
+    <div className="flex h-full">
+      {/* 侧边栏 */}
+      <div className="w-56 border-r bg-muted/20 p-4 flex flex-col gap-2">
+        <div className="text-sm font-medium text-muted-foreground mb-2">
+          设置
+        </div>
+
+        <Button
+          variant={activeTab === "packages" ? "secondary" : "ghost"}
+          className="justify-start gap-2"
+          onClick={() => setActiveTab("packages")}
+        >
+          <span>📦</span> 套餐选择
+        </Button>
+
+        <Button
+          variant={activeTab === "providers" ? "secondary" : "ghost"}
+          className="justify-start gap-2"
+          onClick={() => setActiveTab("providers")}
+        >
+          <span>⚙️</span> 提供商配置
+        </Button>
+
+        <Separator className="my-2" />
+
+        {/* 套餐快捷选择 */}
+        <div className="text-xs text-muted-foreground mb-1">快捷套餐</div>
+        {DEFAULT_PACKAGES.map(pkg => (
+          <Button
+            key={pkg.id}
+            variant="ghost"
+            className="justify-start gap-2 text-sm"
+            onClick={() => setActiveTab("packages")}
+          >
+            <span>{pkg.icon}</span> {pkg.name}
+          </Button>
+        ))}
+      </div>
+
+      {/* 工作区 */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">
+            {activeTab === "packages" ? "选择套餐" : "配置提供商"}
+          </h2>
+        </div>
+
+        <ScrollArea className="flex-1 p-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="animate-spin" />
             </div>
+          ) : activeTab === "packages" ? (
+            /* 套餐选择视图 */
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                选择一个套餐，或自定义配置各服务
+              </p>
 
-            <Button
-              variant={activeTab === "packages" ? "secondary" : "ghost"}
-              className="justify-start gap-2"
-              onClick={() => setActiveTab("packages")}
-            >
-              <span>📦</span> 套餐选择
-            </Button>
-
-            <Button
-              variant={activeTab === "providers" ? "secondary" : "ghost"}
-              className="justify-start gap-2"
-              onClick={() => setActiveTab("providers")}
-            >
-              <span>⚙️</span> 提供商配置
-            </Button>
-
-            <Separator className="my-2" />
-
-            {/* 套餐快捷选择 */}
-            <div className="text-xs text-muted-foreground mb-1">快捷套餐</div>
-            {DEFAULT_PACKAGES.map(pkg => (
-              <Button
-                key={pkg.id}
-                variant="ghost"
-                className="justify-start gap-2 text-sm"
-                onClick={() => setActiveTab("packages")}
-              >
-                <span>{pkg.icon}</span> {pkg.name}
-              </Button>
-            ))}
-          </div>
-
-          {/* 工作区 */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <DialogHeader className="p-4 border-b">
-              <DialogTitle>
-                {activeTab === "packages" ? "选择套餐" : "配置提供商"}
-              </DialogTitle>
-            </DialogHeader>
-
-            <ScrollArea className="flex-1 p-4">
-              {loading ? (
-                <div className="flex items-center justify-center h-40">
-                  <Loader2 className="animate-spin" />
-                </div>
-              ) : activeTab === "packages" ? (
-                /* 套餐选择视图 */
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    选择一个套餐，或自定义配置各服务
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    {packages.map(pkg => (
-                      <Card
-                        key={pkg.id}
-                        className="cursor-pointer hover:border-primary"
-                      >
-                        <CardHeader className="pb-2">
-                          <CardTitle className="flex items-center gap-2">
-                            <span>{pkg.icon}</span> {pkg.name}
-                          </CardTitle>
-                          <p className="text-xs text-muted-foreground">
-                            {pkg.description}
-                          </p>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-1">
-                            {pkg.services.map((svc, idx) => (
-                              <div
-                                key={idx}
-                                className="text-sm flex items-center gap-2"
-                              >
-                                <span>{SERVICE_ICONS[svc.type]}</span>
-                                <span>{SERVICE_NAMES[svc.type]}</span>
-                                <span className="text-muted-foreground">
-                                  - {svc.provider}
-                                </span>
-                              </div>
-                            ))}
+              <div className="grid grid-cols-3 gap-4">
+                {packages.map(pkg => (
+                  <Card
+                    key={pkg.id}
+                    className="cursor-pointer hover:border-primary"
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2">
+                        <span>{pkg.icon}</span> {pkg.name}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        {pkg.description}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-1">
+                        {pkg.services.map((svc, idx) => (
+                          <div
+                            key={idx}
+                            className="text-sm flex items-center gap-2"
+                          >
+                            <span>{SERVICE_ICONS[svc.type]}</span>
+                            <span>{SERVICE_NAMES[svc.type]}</span>
+                            <span className="text-muted-foreground">
+                              - {svc.provider}
+                            </span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* 提供商配置视图 */
+            <div className="space-y-6">
+              {/* 服务类型选择 */}
+              <div className="flex gap-2">
+                {Object.entries(SERVICE_NAMES).map(([type, name]) => (
+                  <Button
+                    key={type}
+                    variant={
+                      selectedServiceType === type ? "default" : "outline"
+                    }
+                    onClick={() => {
+                      setSelectedServiceType(type);
+                      const firstProvider = getProvidersForService(type)[0];
+                      if (firstProvider) {
+                        setSelectedProvider(firstProvider.id);
+                      }
+                    }}
+                  >
+                    {SERVICE_ICONS[type]} {name}
+                  </Button>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* 提供商选择 */}
+              <div className="space-y-2">
+                <Label>选择提供商</Label>
+                <Select
+                  value={selectedProvider}
+                  onValueChange={setSelectedProvider}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getProvidersForService(selectedServiceType).map(
+                      provider => (
+                        <SelectItem key={provider.id} value={provider.id}>
+                          {provider.name}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* API Key 配置 */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <Input
+                    type="password"
+                    value={formData.api_key}
+                    onChange={e =>
+                      setFormData({ ...formData, api_key: e.target.value })
+                    }
+                    placeholder="输入 API Key"
+                  />
                 </div>
-              ) : (
-                /* 提供商配置视图 */
-                <div className="space-y-6">
-                  {/* 服务类型选择 */}
-                  <div className="flex gap-2">
-                    {Object.entries(SERVICE_NAMES).map(([type, name]) => (
-                      <Button
-                        key={type}
-                        variant={
-                          selectedServiceType === type ? "default" : "outline"
-                        }
-                        onClick={() => {
-                          setSelectedServiceType(type);
-                          const firstProvider = getProvidersForService(type)[0];
-                          if (firstProvider) {
-                            setSelectedProvider(firstProvider.id);
-                          }
-                        }}
-                      >
-                        {SERVICE_ICONS[type]} {name}
-                      </Button>
-                    ))}
-                  </div>
 
-                  <Separator />
-
-                  {/* 提供商选择 */}
+                {getProvidersForService(selectedServiceType).find(
+                  p => p.id === selectedProvider
+                )?.requires_secret && (
                   <div className="space-y-2">
-                    <Label>选择提供商</Label>
+                    <Label>API Secret</Label>
+                    <Input
+                      type="password"
+                      value={formData.api_secret}
+                      onChange={e =>
+                        setFormData({ ...formData, api_secret: e.target.value })
+                      }
+                      placeholder="输入 API Secret (如 Kling)"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>模型</Label>
+                  <div className="flex gap-2">
                     <Select
-                      value={selectedProvider}
-                      onValueChange={setSelectedProvider}
+                      value={formData.model}
+                      onValueChange={value =>
+                        setFormData({ ...formData, model: value })
+                      }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
+                      <SelectTrigger className="flex-1">
+                        <SelectValue
+                          placeholder={loadingModels ? "加载中..." : "选择模型"}
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        {getProvidersForService(selectedServiceType).map(
-                          provider => (
-                            <SelectItem key={provider.id} value={provider.id}>
-                              {provider.name}
-                            </SelectItem>
-                          )
-                        )}
+                        {models.map(model => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  {/* API Key 配置 */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>API Key</Label>
-                      <Input
-                        type="password"
-                        value={formData.api_key}
-                        onChange={e =>
-                          setFormData({ ...formData, api_key: e.target.value })
-                        }
-                        placeholder="输入 API Key"
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => loadModels(selectedProvider)}
+                      title="刷新模型列表"
+                    >
+                      <RefreshCw
+                        className={loadingModels ? "animate-spin" : ""}
+                        size={16}
                       />
-                    </div>
-
-                    {getProvidersForService(selectedServiceType).find(
-                      p => p.id === selectedProvider
-                    )?.requires_secret && (
-                      <div className="space-y-2">
-                        <Label>API Secret</Label>
-                        <Input
-                          type="password"
-                          value={formData.api_secret}
-                          onChange={e =>
-                            setFormData({
-                              ...formData,
-                              api_secret: e.target.value,
-                            })
-                          }
-                          placeholder="输入 API Secret (如 Kling)"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label>模型</Label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={formData.model}
-                          onValueChange={value =>
-                            setFormData({ ...formData, model: value })
-                          }
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue
-                              placeholder={
-                                loadingModels ? "加载中..." : "选择模型"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {models.map(model => (
-                              <SelectItem key={model} value={model}>
-                                {model}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => loadModels(selectedProvider)}
-                          title="刷新模型列表"
-                        >
-                          <RefreshCw
-                            className={loadingModels ? "animate-spin" : ""}
-                            size={16}
-                          />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Base URL (留空使用默认)</Label>
-                      <Input
-                        value={formData.base_url}
-                        onChange={e =>
-                          setFormData({ ...formData, base_url: e.target.value })
-                        }
-                        placeholder={
-                          providers.find(p => p.id === selectedProvider)
-                            ?.default_url || ""
-                        }
-                      />
-                    </div>
-
-                    {/* 测试结果 */}
-                    {testResult && (
-                      <div
-                        className={`p-3 rounded-lg ${testResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
-                      >
-                        {testResult.success ? (
-                          <Check className="inline mr-2" />
-                        ) : (
-                          <X className="inline mr-2" />
-                        )}
-                        {testResult.message}
-                      </div>
-                    )}
-
-                    {/* 操作按钮 */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={testConfig}
-                        disabled={testing || !formData.api_key}
-                      >
-                        {testing ? (
-                          <Loader2 className="mr-2 animate-spin" size={16} />
-                        ) : null}
-                        测试连接
-                      </Button>
-                      <Button onClick={saveConfig} disabled={!formData.api_key}>
-                        <Check className="mr-2" size={16} />
-                        保存配置
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* 已保存的配置列表 */}
-                  <div className="space-y-2">
-                    <Label>已保存的配置</Label>
-                    <div className="space-y-2">
-                      {userConfigs
-                        .filter(c => c.config_type === selectedServiceType)
-                        .map(config => (
-                          <Card key={config.id} className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <span className="font-medium">
-                                  {config.provider_name}
-                                </span>
-                                {config.model && (
-                                  <span className="text-muted-foreground">
-                                    {" "}
-                                    - {config.model}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant={
-                                    config.is_active ? "default" : "secondary"
-                                  }
-                                >
-                                  {config.is_active ? "已启用" : "已禁用"}
-                                </Badge>
-                                {config.api_key_configured && (
-                                  <Badge variant="outline">已配置</Badge>
-                                )}
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                      {userConfigs.filter(
-                        c => c.config_type === selectedServiceType
-                      ).length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          暂无已保存的配置
-                        </p>
-                      )}
-                    </div>
+                    </Button>
                   </div>
                 </div>
-              )}
-            </ScrollArea>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+                <div className="space-y-2">
+                  <Label>Base URL (留空使用默认)</Label>
+                  <Input
+                    value={formData.base_url}
+                    onChange={e =>
+                      setFormData({ ...formData, base_url: e.target.value })
+                    }
+                    placeholder={
+                      providers.find(p => p.id === selectedProvider)
+                        ?.default_url || ""
+                    }
+                  />
+                </div>
+
+                {/* 测试结果 */}
+                {testResult && (
+                  <div
+                    className={`p-3 rounded-lg ${testResult.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}
+                  >
+                    {testResult.success ? (
+                      <Check className="inline mr-2" />
+                    ) : (
+                      <X className="inline mr-2" />
+                    )}
+                    {testResult.message}
+                  </div>
+                )}
+
+                {/* 操作按钮 */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={testConfig}
+                    disabled={testing || !formData.api_key}
+                  >
+                    {testing ? (
+                      <Loader2 className="mr-2 animate-spin" size={16} />
+                    ) : null}
+                    测试连接
+                  </Button>
+                  <Button onClick={saveConfig} disabled={!formData.api_key}>
+                    <Check className="mr-2" size={16} />
+                    保存配置
+                  </Button>
+                </div>
+              </div>
+
+              {/* 已保存的配置列表 */}
+              <div className="space-y-2">
+                <Label>已保存的配置</Label>
+                <div className="space-y-2">
+                  {userConfigs
+                    .filter(c => c.config_type === selectedServiceType)
+                    .map(config => (
+                      <Card key={config.id} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-medium">
+                              {config.provider_name}
+                            </span>
+                            {config.model && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                - {config.model}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                config.is_active ? "default" : "secondary"
+                              }
+                            >
+                              {config.is_active ? "已启用" : "已禁用"}
+                            </Badge>
+                            {config.api_key_configured && (
+                              <Badge variant="outline">已配置</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  {userConfigs.filter(
+                    c => c.config_type === selectedServiceType
+                  ).length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      暂无已保存的配置
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+    </div>
   );
 }
 

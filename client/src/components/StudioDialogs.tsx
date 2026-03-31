@@ -22,8 +22,18 @@ interface StudioDialogsProps {
 export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
   return (
     <>
-      {/* 设置对话框 - 使用新的独立组件 */}
-      <SettingsDialog open={open === "settings"} onClose={onClose} />
+      {/* 设置对话框 - 使用新的独立组件，强制宽度覆盖 */}
+      <Dialog
+        open={open === "settings"}
+        onOpenChange={isOpen => !isOpen && onClose()}
+      >
+        <DialogContent
+          className="!max-w-[1400px] !w-[1400px] !h-[90vh] !p-0 bg-card"
+          style={{ maxWidth: "1400px", width: "1400px", height: "90vh" }}
+        >
+          <SettingsDialog open={true} onClose={onClose} />
+        </DialogContent>
+      </Dialog>
 
       {/* 用户中心对话框 */}
       <Dialog
