@@ -7,9 +7,24 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Save, Palette, Globe, Moon, Sun, Monitor } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Save,
+  Palette,
+  Globe,
+  Moon,
+  Sun,
+  Monitor,
+} from "lucide-react";
 import { userApi, UserPreferences } from "@/lib/api";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -20,12 +35,14 @@ interface PreferencesProps {
 export default function Preferences({ embedded = false }: PreferencesProps) {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [language, setLanguage] = useState("zh-CN");
-  const [themeOption, setThemeOption] = useState<"light" | "dark" | "system">("light");
+  const [themeOption, setThemeOption] = useState<"light" | "dark" | "system">(
+    "light"
+  );
 
   useEffect(() => {
     loadPreferences();
@@ -89,19 +106,29 @@ export default function Preferences({ embedded = false }: PreferencesProps) {
               >
                 <Palette size={14} className="text-white" />
               </div>
-              <span className="font-semibold text-foreground">{t("preferences")}</span>
+              <span className="font-semibold text-foreground">
+                {t("preferences")}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={handleSave} disabled={saving} className="gap-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {saving ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Save size={14} />
+              )}
               {t("save")}
             </Button>
           </div>
         </header>
       )}
 
-      <div className={embedded ? "p-4 space-y-4" : "max-w-2xl mx-auto px-6 py-8 space-y-6"}>
+      <div
+        className={
+          embedded ? "p-4 space-y-4" : "max-w-2xl mx-auto px-6 py-8 space-y-6"
+        }
+      >
         {/* 主题设置 */}
         <Card>
           <CardHeader>
@@ -116,32 +143,32 @@ export default function Preferences({ embedded = false }: PreferencesProps) {
               <button
                 onClick={() => setThemeOption("light")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  themeOption === "light" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  themeOption === "light"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
                 <Sun size={24} className="text-yellow-500" />
                 <span className="text-sm font-medium">{t("themeLight")}</span>
               </button>
-              
+
               <button
                 onClick={() => setThemeOption("dark")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  themeOption === "dark" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  themeOption === "dark"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
                 <Moon size={24} className="text-indigo-500" />
                 <span className="text-sm font-medium">{t("themeDark")}</span>
               </button>
-              
+
               <button
                 onClick={() => setThemeOption("system")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  themeOption === "system" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  themeOption === "system"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
@@ -166,20 +193,20 @@ export default function Preferences({ embedded = false }: PreferencesProps) {
               <button
                 onClick={() => setLanguage("zh-CN")}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                  language === "zh-CN" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  language === "zh-CN"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
                 <span className="text-lg">🇨🇳</span>
                 <span className="font-medium">{t("simplifiedChinese")}</span>
               </button>
-              
+
               <button
                 onClick={() => setLanguage("en-US")}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                  language === "en-US" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  language === "en-US"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
@@ -190,20 +217,20 @@ export default function Preferences({ embedded = false }: PreferencesProps) {
               <button
                 onClick={() => setLanguage("zh-TW")}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                  language === "zh-TW" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  language === "zh-TW"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
                 <span className="text-lg">🇭🇰</span>
                 <span className="font-medium">{t("traditionalChinese")}</span>
               </button>
-              
+
               <button
                 onClick={() => setLanguage("ja")}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                  language === "ja" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  language === "ja"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >
@@ -214,8 +241,8 @@ export default function Preferences({ embedded = false }: PreferencesProps) {
               <button
                 onClick={() => setLanguage("ko")}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
-                  language === "ko" 
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                  language === "ko"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-border hover:border-gray-300"
                 }`}
               >

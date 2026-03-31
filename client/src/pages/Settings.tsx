@@ -11,7 +11,13 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UserMenu } from "@/components/UserMenu";
 import { toast } from "sonner";
 import {
@@ -78,7 +84,8 @@ const DEFAULT_FIELDS: ApiField[] = [
     name: "MiniMax",
     description: "对话与情绪表达最强，适合情感类内容",
     placeholder: "xxxxxxxxxxxxxxxxxxxxxxxx",
-    docsUrl: "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+    docsUrl:
+      "https://platform.minimaxi.com/user-center/basic-information/interface-key",
     apiKey: "llm_api_key",
     value: "",
     enabled: false,
@@ -100,7 +107,8 @@ const DEFAULT_FIELDS: ApiField[] = [
     id: "nano_banana",
     category: "视觉层 (生图)",
     name: "Nano Banana (Gemini 3 Pro Image)",
-    description: "4K 首帧锁定，主体一致性基础，目前最强文生图 API（与 Gemini LLM 共用同一 Key）",
+    description:
+      "4K 首帧锁定，主体一致性基础，目前最强文生图 API（与 Gemini LLM 共用同一 Key）",
     placeholder: "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxx",
     docsUrl: "https://aistudio.google.com/app/apikey",
     apiKey: "image_gen_api_key",
@@ -141,7 +149,8 @@ const DEFAULT_FIELDS: ApiField[] = [
     name: "MiniMax Speech 2.8 HD",
     description: "中文自然度业界领先，支持声音克隆和情感控制",
     placeholder: "xxxxxxxxxxxxxxxxxxxxxxxx",
-    docsUrl: "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+    docsUrl:
+      "https://platform.minimaxi.com/user-center/basic-information/interface-key",
     apiKey: "tts_api_key",
     value: "",
     enabled: true,
@@ -162,9 +171,10 @@ const DEFAULT_FIELDS: ApiField[] = [
 
 interface SettingsProps {
   embedded?: boolean;
+  onSaved?: () => void;
 }
 
-export default function Settings({ embedded = false }: SettingsProps) {
+export default function Settings({ embedded = false, onSaved }: SettingsProps) {
   const [fields, setFields] = useState<ApiField[]>(DEFAULT_FIELDS);
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
   const [expandedCategories, setExpandedCategories] = useState<
@@ -195,11 +205,17 @@ export default function Settings({ embedded = false }: SettingsProps) {
         const status: ApiKeysStatus = await settingsApi.getKeysStatus();
         setLlmProvider(status.llm.provider);
 
-        setFields((prev) =>
-          prev.map((f) => {
+        setFields(prev =>
+          prev.map(f => {
             let isConfigured = false;
-            if (f.id === "deepseek" || f.id === "kimi" || f.id === "minimax_llm" || f.id === "gemini") {
-              isConfigured = status.llm.configured && status.llm.provider === f.id;
+            if (
+              f.id === "deepseek" ||
+              f.id === "kimi" ||
+              f.id === "minimax_llm" ||
+              f.id === "gemini"
+            ) {
+              isConfigured =
+                status.llm.configured && status.llm.provider === f.id;
             } else if (f.id === "nano_banana") {
               isConfigured = status.image_gen.configured;
             } else if (f.id === "kling") {
@@ -221,14 +237,14 @@ export default function Settings({ embedded = false }: SettingsProps) {
     init();
   }, []);
 
-  const categories = Array.from(new Set(DEFAULT_FIELDS.map((f) => f.category)));
+  const categories = Array.from(new Set(DEFAULT_FIELDS.map(f => f.category)));
 
   const toggleShow = (id: string) => {
-    setShowValues((prev) => ({ ...prev, [id]: !prev[id] }));
+    setShowValues(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const toggleCategory = (cat: string) => {
-    setExpandedCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
+    setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
   };
 
   const updateField = (
@@ -236,8 +252,8 @@ export default function Settings({ embedded = false }: SettingsProps) {
     field: "value" | "secretValue" | "enabled",
     val: string | boolean
   ) => {
-    setFields((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, [field]: val } : f))
+    setFields(prev =>
+      prev.map(f => (f.id === id ? { ...f, [field]: val } : f))
     );
   };
 
@@ -251,7 +267,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
     }
 
     setTestingService(field.id);
-    setTestResults((prev) => {
+    setTestResults(prev => {
       const next = { ...prev };
       delete next[field.id];
       return next;
@@ -259,7 +275,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
 
     try {
       const result = await settingsApi.testKey(field.testService);
-      setTestResults((prev) => ({ ...prev, [field.id]: result }));
+      setTestResults(prev => ({ ...prev, [field.id]: result }));
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -267,7 +283,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "测试失败";
-      setTestResults((prev) => ({
+      setTestResults(prev => ({
         ...prev,
         [field.id]: { success: false, message: msg },
       }));
@@ -297,11 +313,12 @@ export default function Settings({ embedded = false }: SettingsProps) {
 
       // 重新加载状态
       const status = await settingsApi.getKeysStatus();
-      setFields((prev) =>
-        prev.map((f) => {
+      setFields(prev =>
+        prev.map(f => {
           let isConfigured = false;
           if (["deepseek", "kimi", "minimax_llm", "gemini"].includes(f.id)) {
-            isConfigured = status.llm.configured && status.llm.provider === f.id;
+            isConfigured =
+              status.llm.configured && status.llm.provider === f.id;
           } else if (f.id === "nano_banana") {
             isConfigured = status.image_gen.configured;
           } else if (f.id === "kling") {
@@ -321,6 +338,10 @@ export default function Settings({ embedded = false }: SettingsProps) {
       toast.error(`保存失败：${msg}`);
     } finally {
       setSaving(false);
+      // 保存完成后调用回调（如果有）
+      if (onSaved) {
+        onSaved();
+      }
     }
   };
 
@@ -352,43 +373,49 @@ export default function Settings({ embedded = false }: SettingsProps) {
               </span>
             </div>
           </div>
-        <div className="flex items-center gap-3">
-          {/* 后端状态指示 */}
-          {loadingStatus ? (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 size={12} className="animate-spin" />
-              检查后端...
-            </div>
-          ) : backendOnline ? (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-              <CheckCircle2 size={12} />
-              后端已连接
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs text-red-500">
-              <AlertCircle size={12} />
-              后端未连接
-            </div>
-          )}
-          <UserMenu />
-          <Button
-            onClick={handleSave}
-            disabled={saving || !backendOnline}
-            style={{ background: "var(--primary)" }}
-            className="gap-2"
-          >
-            {saving ? (
-              <Loader2 size={14} className="animate-spin" />
+          <div className="flex items-center gap-3">
+            {/* 后端状态指示 */}
+            {loadingStatus ? (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 size={12} className="animate-spin" />
+                检查后端...
+              </div>
+            ) : backendOnline ? (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-600">
+                <CheckCircle2 size={12} />
+                后端已连接
+              </div>
             ) : (
-              <Check size={14} />
+              <div className="flex items-center gap-1.5 text-xs text-red-500">
+                <AlertCircle size={12} />
+                后端未连接
+              </div>
             )}
-            保存配置
-          </Button>
-        </div>
+            <UserMenu />
+            <Button
+              onClick={handleSave}
+              disabled={saving || !backendOnline}
+              style={{ background: "var(--primary)" }}
+              className="gap-2"
+            >
+              {saving ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Check size={14} />
+              )}
+              保存配置
+            </Button>
+          </div>
         </header>
       )}
 
-      <div className={embedded ? "p-4" : "max-w-3xl mx-auto px-6 py-8"}>
+      <div
+        className={
+          embedded
+            ? "p-4 overflow-y-auto h-full"
+            : "max-w-3xl mx-auto px-6 py-8"
+        }
+      >
         <div className="mb-8">
           <h1
             style={{ fontFamily: "'Playfair Display', serif" }}
@@ -397,8 +424,9 @@ export default function Settings({ embedded = false }: SettingsProps) {
             API 连接器配置
           </h1>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            配置各层 API Key，系统将使用这些接口完成脚本生成、生图、配音和视频合成。
-            所有 Key 仅存储在后端本地配置文件中，不会上传至任何第三方服务器。
+            配置各层 API
+            Key，系统将使用这些接口完成脚本生成、生图、配音和视频合成。 所有 Key
+            仅存储在后端本地配置文件中，不会上传至任何第三方服务器。
           </p>
         </div>
 
@@ -431,7 +459,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
             默认 LLM 提供商
           </h3>
           <div className="grid grid-cols-4 gap-2">
-            {["deepseek", "kimi", "minimax", "gemini"].map((p) => (
+            {["deepseek", "kimi", "minimax", "gemini"].map(p => (
               <button
                 key={p}
                 onClick={() => setLlmProvider(p)}
@@ -444,21 +472,21 @@ export default function Settings({ embedded = false }: SettingsProps) {
                 {p === "deepseek"
                   ? "DeepSeek"
                   : p === "kimi"
-                  ? "Kimi"
-                  : p === "minimax"
-                  ? "MiniMax"
-                  : "Gemini"}
+                    ? "Kimi"
+                    : p === "minimax"
+                      ? "MiniMax"
+                      : "Gemini"}
               </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-4">
-          {categories.map((cat) => {
-            const catFields = fields.filter((f) => f.category === cat);
+          {categories.map(cat => {
+            const catFields = fields.filter(f => f.category === cat);
             const expanded = expandedCategories[cat];
             const configuredCount = catFields.filter(
-              (f) => f.isConfigured
+              f => f.isConfigured
             ).length;
 
             return (
@@ -493,7 +521,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
 
                 {expanded && (
                   <div className="border-t border-border divide-y divide-border">
-                    {catFields.map((field) => {
+                    {catFields.map(field => {
                       const testResult = testResults[field.id];
                       const isTesting = testingService === field.id;
 
@@ -524,7 +552,9 @@ export default function Settings({ embedded = false }: SettingsProps) {
                                     ) : (
                                       <AlertCircle size={10} />
                                     )}
-                                    {testResult.success ? "连接正常" : "连接失败"}
+                                    {testResult.success
+                                      ? "连接正常"
+                                      : "连接失败"}
                                   </span>
                                 )}
                               </div>
@@ -551,7 +581,10 @@ export default function Settings({ embedded = false }: SettingsProps) {
                                   }`}
                                 >
                                   {isTesting ? (
-                                    <Loader2 size={11} className="animate-spin" />
+                                    <Loader2
+                                      size={11}
+                                      className="animate-spin"
+                                    />
                                   ) : (
                                     <Play size={11} />
                                   )}
@@ -571,8 +604,12 @@ export default function Settings({ embedded = false }: SettingsProps) {
                                 <input
                                   type="checkbox"
                                   checked={field.enabled}
-                                  onChange={(e) =>
-                                    updateField(field.id, "enabled", e.target.checked)
+                                  onChange={e =>
+                                    updateField(
+                                      field.id,
+                                      "enabled",
+                                      e.target.checked
+                                    )
                                   }
                                   className="sr-only peer"
                                 />
@@ -585,10 +622,16 @@ export default function Settings({ embedded = false }: SettingsProps) {
                             <div className="space-y-2">
                               <div className="relative">
                                 <input
-                                  type={showValues[field.id] ? "text" : "password"}
+                                  type={
+                                    showValues[field.id] ? "text" : "password"
+                                  }
                                   value={field.value}
-                                  onChange={(e) =>
-                                    updateField(field.id, "value", e.target.value)
+                                  onChange={e =>
+                                    updateField(
+                                      field.id,
+                                      "value",
+                                      e.target.value
+                                    )
                                   }
                                   placeholder={
                                     field.isConfigured
@@ -618,7 +661,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
                                         : "password"
                                     }
                                     value={field.secretValue || ""}
-                                    onChange={(e) =>
+                                    onChange={e =>
                                       updateField(
                                         field.id,
                                         "secretValue",
@@ -628,7 +671,8 @@ export default function Settings({ embedded = false }: SettingsProps) {
                                     placeholder={
                                       field.isConfigured
                                         ? "Secret 已配置（输入新值以更新）"
-                                        : field.secretPlaceholder || "API Secret"
+                                        : field.secretPlaceholder ||
+                                          "API Secret"
                                     }
                                     className="w-full text-sm px-3 py-2 pr-10 rounded-lg border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-ring"
                                   />
@@ -667,6 +711,28 @@ export default function Settings({ embedded = false }: SettingsProps) {
             中，不会上传至任何第三方服务器。建议定期轮换 Key 以确保安全。
           </p>
         </div>
+
+        {/* 嵌入模式下的保存按钮 */}
+        {embedded && (
+          <div className="mt-6 flex justify-end">
+            <Button
+              onClick={() => {
+                handleSave();
+                // 如果有 onSaved 回调，保存后调用
+              }}
+              disabled={saving || !backendOnline}
+              style={{ background: "var(--primary)" }}
+              className="gap-2"
+            >
+              {saving ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Check size={14} />
+              )}
+              保存配置
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

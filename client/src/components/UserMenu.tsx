@@ -9,8 +9,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, Film, UserCircle, Palette, Link2, X } from "lucide-react";
-import { StudioDialogs, DialogType, AccountBindingDialog } from "@/components/StudioDialogs";
+import {
+  User,
+  Settings,
+  LogOut,
+  Film,
+  UserCircle,
+  Palette,
+  Link2,
+  X,
+} from "lucide-react";
+import {
+  StudioDialogs,
+  DialogType,
+  AccountBindingDialog,
+} from "@/components/StudioDialogs";
 
 interface UserMenuProps {
   collapsed?: boolean;
@@ -34,7 +47,9 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
         className="flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg mb-0.5 transition-colors cursor-pointer text-muted-foreground hover:bg-secondary hover:text-foreground w-full"
       >
         <User size={18} className="shrink-0" />
-        {!collapsed && <span className="text-sm font-medium truncate">登录</span>}
+        {!collapsed && (
+          <span className="text-sm font-medium truncate">登录</span>
+        )}
       </button>
     );
   }
@@ -56,39 +71,44 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] flex items-center justify-center text-white text-xs font-medium shrink-0">
               {user.username.charAt(0).toUpperCase()}
             </div>
-            {!collapsed && <span className="text-sm font-medium truncate">{user.username}</span>}
+            {!collapsed && (
+              <span className="text-sm font-medium truncate">
+                {user.username}
+              </span>
+            )}
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 bg-card border-border/50">
+        <DropdownMenuContent
+          align="end"
+          className="w-56 bg-card border-border/50"
+        >
           <DropdownMenuLabel>
             <div className="flex flex-col">
-              <span className="font-medium text-foreground">{user.username}</span>
-              <span className="text-xs text-muted-foreground font-normal">{user.email}</span>
+              <span className="font-medium text-foreground">
+                {user.username}
+              </span>
+              <span className="text-xs text-muted-foreground font-normal">
+                {user.email}
+              </span>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="bg-border/50" />
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={() => handleMenuItemClick("profile")}
             className="cursor-pointer"
           >
             <UserCircle size={14} className="mr-2" />
             用户中心
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={() => handleMenuItemClick("settings")}
             className="cursor-pointer"
           >
             <Settings size={14} className="mr-2" />
             设置
           </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => handleMenuItemClick("preferences")}
-            className="cursor-pointer"
-          >
-            <Palette size={14} className="mr-2" />
-            偏好设置
-          </DropdownMenuItem>
-          <DropdownMenuItem 
+
+          <DropdownMenuItem
             onClick={() => setAccountBindingOpen(true)}
             className="cursor-pointer"
           >
@@ -96,8 +116,8 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
             账号绑定
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border/50" />
-          <DropdownMenuItem 
-            onClick={handleLogout} 
+          <DropdownMenuItem
+            onClick={handleLogout}
             className="text-red-400 cursor-pointer"
           >
             <LogOut size={14} className="mr-2" />
@@ -108,9 +128,12 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
 
       {/* 对话框 */}
       <StudioDialogs open={openDialog} onClose={() => setOpenDialog(null)} />
-      
+
       {/* 账号绑定对话框 */}
-      <AccountBindingDialog open={accountBindingOpen} onClose={() => setAccountBindingOpen(false)} />
+      <AccountBindingDialog
+        open={accountBindingOpen}
+        onClose={() => setAccountBindingOpen(false)}
+      />
     </>
   );
 }

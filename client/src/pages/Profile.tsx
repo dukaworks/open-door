@@ -16,9 +16,10 @@ import { userApi, UserProfile } from "@/lib/api";
 
 interface ProfileProps {
   embedded?: boolean;
+  onSaved?: () => void;
 }
 
-export default function Profile({ embedded = false }: ProfileProps) {
+export default function Profile({ embedded = false, onSaved }: ProfileProps) {
   const { user, checkAuth } = useAuth();
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +98,11 @@ export default function Profile({ embedded = false }: ProfileProps) {
       await userApi.updateProfile({ username, email });
       toast.success("用户信息已更新");
       await checkAuth();
+      
+      // 如果是嵌入式对话框，保存后自动关闭
+      if (onSaved) {
+        onSaved();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "更新失败");
     } finally {
@@ -168,15 +174,15 @@ export default function Profile({ embedded = false }: ProfileProps) {
         </header>
       )}
 
-      <div className={embedded ? "p-4" : "max-w-2xl mx-auto px-6 py-8"}>
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+      <div className={embedded ? "flex flex-col h-full pt-2 pb-4 px-1" : "max-w-2xl mx-auto px-6 py-8"}>
+        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 mb-4 shrink-0">
             <TabsTrigger value="profile">基本信息</TabsTrigger>
             <TabsTrigger value="security">账号安全</TabsTrigger>
           </TabsList>
 
           {/* 基本信息 */}
-          <TabsContent value="profile">
+          <TabsContent value="profile" className="flex-1 overflow-y-auto mt-0 min-h-0">
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle>基本信息</CardTitle>
@@ -235,7 +241,7 @@ export default function Profile({ embedded = false }: ProfileProps) {
                   />
                 </div>
 
-                <Button onClick={handleSaveProfile} disabled={saving} className="w-full gap-2">
+                <Button onClick={handleSaveProfile} disabled={saving} className="w-full gap-2 shrink-0">
                   {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                   保存修改
                 </Button>
@@ -244,7 +250,7 @@ export default function Profile({ embedded = false }: ProfileProps) {
           </TabsContent>
 
           {/* 账号安全 */}
-          <TabsContent value="security">
+          <TabsContent value="security" className="flex-1 overflow-y-auto mt-0 min-h-0">
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

@@ -3,12 +3,16 @@
  * 用于在 Studio 页面中以对话框形式打开设置、偏好、用户中心
  */
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Settings from "@/pages/Settings";
 import Profile from "@/pages/Profile";
-import Preferences from "@/pages/Preferences";
 
-export type DialogType = "settings" | "profile" | "preferences" | null;
+export type DialogType = "settings" | "profile" | null;
 
 interface StudioDialogsProps {
   open: DialogType;
@@ -19,32 +23,22 @@ export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
   return (
     <>
       {/* 设置对话框 */}
-      <Dialog open={open === "settings"} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card">
-          <DialogHeader>
-            <DialogTitle>设置</DialogTitle>
-          </DialogHeader>
-          <Settings />
+      <Dialog
+        open={open === "settings"}
+        onOpenChange={isOpen => !isOpen && onClose()}
+      >
+        <DialogContent className="max-w-4xl h-[85vh] bg-card">
+          <Settings embedded={true} onSaved={onClose} />
         </DialogContent>
       </Dialog>
 
       {/* 用户中心对话框 */}
-      <Dialog open={open === "profile"} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
-          <DialogHeader>
-            <DialogTitle>用户中心</DialogTitle>
-          </DialogHeader>
-          <Profile />
-        </DialogContent>
-      </Dialog>
-
-      {/* 偏好设置对话框 */}
-      <Dialog open={open === "preferences"} onOpenChange={(isOpen) => !isOpen && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
-          <DialogHeader>
-            <DialogTitle>偏好设置</DialogTitle>
-          </DialogHeader>
-          <Preferences />
+      <Dialog
+        open={open === "profile"}
+        onOpenChange={isOpen => !isOpen && onClose()}
+      >
+        <DialogContent className="max-w-2xl h-[50vh] bg-card">
+          <Profile embedded={true} onSaved={onClose} />
         </DialogContent>
       </Dialog>
     </>
@@ -52,9 +46,15 @@ export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
 }
 
 // 账号绑定对话框（复用设置页面）
-export function AccountBindingDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AccountBindingDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={isOpen => !isOpen && onClose()}>
       <DialogContent className="max-w-2xl bg-card">
         <DialogHeader>
           <DialogTitle>账号绑定</DialogTitle>

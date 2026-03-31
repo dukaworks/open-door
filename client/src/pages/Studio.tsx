@@ -22,6 +22,10 @@ import { Link, useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "@/contexts/ThemeContext";
+import { userApi } from "@/lib/api";
+import { StudioDialogs, DialogType } from "@/components/StudioDialogs";
 import DebugPanel from "@/components/DebugPanel";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +34,7 @@ import { toast } from "sonner";
 import {
   Film,
   History,
+  GitBranch,
   Sparkles,
   Send,
   ChevronRight,
@@ -48,8 +53,6 @@ import {
   Bot,
   User,
   RefreshCw,
-  Wifi,
-  WifiOff,
   Star,
   X,
   Upload,
@@ -61,6 +64,11 @@ import {
   BookOpen,
   Camera,
   Edit3,
+  Globe,
+  Moon,
+  Sun,
+  Monitor,
+  Settings,
 } from "lucide-react";
 import { useWorkflow, AgentLog } from "@/hooks/useWorkflow";
 import { useProjects } from "@/hooks/useProjects";
@@ -114,9 +122,18 @@ const STAGE_PROGRESS: Record<WorkflowStage, number> = {
 };
 
 const SHOT_MODE_BADGE: Record<ShotMode, { label: string; cls: string }> = {
-  multi_ref: { label: "多参考", cls: "bg-violet-100 text-violet-700 border-violet-200" },
-  first_end_frame: { label: "首尾帧", cls: "bg-amber-100 text-amber-700 border-amber-200" },
-  t2v: { label: "文生视频", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  multi_ref: {
+    label: "多参考",
+    cls: "bg-violet-100 text-violet-700 border-violet-200",
+  },
+  first_end_frame: {
+    label: "首尾帧",
+    cls: "bg-amber-100 text-amber-700 border-amber-200",
+  },
+  t2v: {
+    label: "文生视频",
+    cls: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  },
   i2v: { label: "图生视频", cls: "bg-sky-100 text-sky-700 border-sky-200" },
 };
 
@@ -131,11 +148,19 @@ function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      onClick={() => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
       className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors shrink-0"
       title="复制"
     >
-      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+      {copied ? (
+        <Check size={12} className="text-emerald-500" />
+      ) : (
+        <Copy size={12} />
+      )}
     </button>
   );
 }
@@ -157,12 +182,14 @@ function EditableField({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</label>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          {label}
+        </label>
         <CopyBtn text={value} />
       </div>
       <Textarea
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         rows={rows}
         className={`text-xs resize-none leading-relaxed ${mono ? "font-mono" : ""}`}
       />
@@ -182,6 +209,7 @@ function SidebarNav({
   projects: ReturnType<typeof useProjects>["projects"];
   onSelectProject: (id: string) => void;
 }) {
+  const [, setLocation] = useLocation();
   const navItems = [
     { icon: Film, label: "工作台", href: "/studio", active: true },
   ];
@@ -191,28 +219,37 @@ function SidebarNav({
       className="flex flex-col border-r border-border bg-card transition-all duration-300 shrink-0 h-screen"
       style={{ width: collapsed ? 64 : 220 }}
     >
-      <button onClick={() => setLocation("/")} className="flex items-center gap-3 px-4 py-5 border-b border-border hover:bg-secondary transition-colors cursor-pointer w-full no-underline">
-        <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
-          <Zap size={16} className="text-primary-foreground" />
-        </div>
+      <button
+        onClick={() => setLocation("/")}
+        className="flex items-center gap-2 px-4 py-5 border-b border-border hover:bg-secondary/50 transition-colors cursor-pointer w-full no-underline"
+      >
+        <img src="/images/logo.png" alt="Logo" className="w-8 h-8" />
         {!collapsed && (
-          <div>
-            <div className="text-sm font-semibold leading-tight text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
-              芝麻开门
-            </div>
-            <div className="text-xs text-muted-foreground leading-tight">AutoVideo</div>
-          </div>
+          <span className="text-lg font-bold bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] bg-clip-text text-transparent">
+            芝麻开门
+            <span className="text-xs text-muted-foreground/80 ml-2">
+              Open-Door
+            </span>
+          </span>
         )}
       </button>
 
       <nav className="flex-1 py-3 overflow-y-auto">
-        {navItems.map((item) => (
+        {navItems.map(item => (
           <Link key={item.label} to={item.href}>
-            <div className={`flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg mb-0.5 transition-colors cursor-pointer ${
-              item.active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}>
+            <div
+              className={`flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg mb-0.5 transition-colors cursor-pointer ${
+                item.active
+                  ? "bg-[oklch(0.60_0.20_190)] text-white"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              }`}
+            >
               <item.icon size={18} className="shrink-0" />
-              {!collapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
+              {!collapsed && (
+                <span className="text-sm font-medium truncate">
+                  {item.label}
+                </span>
+              )}
             </div>
           </Link>
         ))}
@@ -221,12 +258,17 @@ function SidebarNav({
           <div className="mt-4 px-3">
             <div className="flex items-center gap-1.5 mb-2">
               <History size={12} className="text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">历史项目</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                历史项目
+              </span>
             </div>
             <div className="space-y-1">
-              {projects.slice(0, 8).map((p) => (
-                <button key={p.id} onClick={() => onSelectProject(p.id)}
-                  className="w-full text-left px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors truncate">
+              {projects.slice(0, 8).map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => onSelectProject(p.id)}
+                  className="w-full text-left px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors truncate"
+                >
                   {p.topic}
                 </button>
               ))}
@@ -241,7 +283,10 @@ function SidebarNav({
       </div>
 
       <div className="p-3 border-t border-border">
-        <button onClick={onToggle} className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+        >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
@@ -268,7 +313,8 @@ function CharacterRail({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node))
+        setMenuOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -289,38 +335,59 @@ function CharacterRail({
   };
 
   return (
-    <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-card overflow-x-auto shrink-0">
+    <div className="flex items-center gap-3 px-6 py-3 border-b border-border/30 bg-background/50 shrink-0">
       {/* 添加按钮 */}
       <div className="relative shrink-0" ref={menuRef}>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="w-14 h-14 rounded-full border-2 border-dashed border-border flex flex-col items-center justify-center gap-0.5 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+          className="w-14 h-14 rounded-full border-2 border-dashed border-[oklch(0.60_0.20_190)/0.3] flex flex-col items-center justify-center gap-0.5 hover:border-[oklch(0.60_0.20_190)/0.6] hover:bg-[oklch(0.60_0.20_190)/0.05] transition-all group"
           title="添加角色参考图（支持多选）"
         >
           {isUploading ? (
             <Loader2 size={18} className="animate-spin text-muted-foreground" />
           ) : (
             <>
-              <Plus size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-[9px] text-muted-foreground group-hover:text-primary transition-colors leading-none">角色</span>
+              <Plus
+                size={16}
+                className="text-[oklch(0.60_0.20_190)] group-hover:text-[oklch(0.60_0.20_190)] transition-colors"
+              />
+              <span className="text-[9px] text-[oklch(0.60_0.20_190)] group-hover:text-[oklch(0.60_0.20_190)] transition-colors leading-none">
+                角色
+              </span>
             </>
           )}
         </button>
         {menuOpen && (
-          <div className="absolute top-16 left-0 z-50 bg-card border border-border rounded-xl shadow-lg py-1 w-52">
+          <div className="absolute top-full left-0 mt-2 z-[100] bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg py-1 w-52">
             <label className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary cursor-pointer transition-colors">
               <Image size={14} className="text-muted-foreground" />
               上传图片（可多选）
-              <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImgChange} />
+              <input
+                ref={imgFileRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImgChange}
+              />
             </label>
             <label className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary cursor-pointer transition-colors">
               <Video size={14} className="text-muted-foreground" />
               上传视频（截帧）
-              <input ref={vidFileRef} type="file" accept="video/*" multiple className="hidden" onChange={handleVidChange} />
+              <input
+                ref={vidFileRef}
+                type="file"
+                accept="video/*"
+                multiple
+                className="hidden"
+                onChange={handleVidChange}
+              />
             </label>
             <div className="border-t border-border my-1" />
             <div className="px-3 py-1.5 text-xs text-muted-foreground leading-relaxed">
-              建议上传正/侧/背三视图<br />或四宫格图片保持角色一致性
+              建议上传正/侧/背三视图
+              <br />
+              或四宫格图片保持角色一致性
             </div>
           </div>
         )}
@@ -361,7 +428,8 @@ function BottomToolbar({
   onMultiShotChange,
   resolution,
   onResolutionChange,
-  onAnalyzeVideo,
+  analysisPanelOpen,
+  setAnalysisPanelOpen,
   isGenerating,
   isConnected,
   stage,
@@ -372,7 +440,8 @@ function BottomToolbar({
   onMultiShotChange: (v: boolean) => void;
   resolution: "720p" | "1080p";
   onResolutionChange: (v: "720p" | "1080p") => void;
-  onAnalyzeVideo: () => void;
+  analysisPanelOpen: boolean;
+  setAnalysisPanelOpen: (open: boolean) => void;
   isGenerating: boolean;
   isConnected: boolean;
   stage: WorkflowStage;
@@ -384,17 +453,20 @@ function BottomToolbar({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (engineRef.current && !engineRef.current.contains(e.target as Node)) setEngineOpen(false);
-      if (resRef.current && !resRef.current.contains(e.target as Node)) setResOpen(false);
+      if (engineRef.current && !engineRef.current.contains(e.target as Node))
+        setEngineOpen(false);
+      if (resRef.current && !resRef.current.contains(e.target as Node))
+        setResOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const currentEngine = ENGINE_OPTIONS.find(e => e.value === engine) || ENGINE_OPTIONS[0];
+  const currentEngine =
+    ENGINE_OPTIONS.find(e => e.value === engine) || ENGINE_OPTIONS[0];
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-t border-border bg-card flex-wrap shrink-0">
+    <div className="flex items-center gap-2 px-4 py-2.5 border-t border-border/50 bg-background/80 backdrop-blur-md flex-wrap shrink-0">
       {/* 引擎选择 */}
       <div className="relative" ref={engineRef}>
         <button
@@ -410,14 +482,23 @@ function BottomToolbar({
             {ENGINE_OPTIONS.map(opt => (
               <button
                 key={opt.value}
-                onClick={() => { onEngineChange(opt.value as "kling" | "seedance" | "auto"); setEngineOpen(false); }}
+                onClick={() => {
+                  onEngineChange(opt.value as "kling" | "seedance" | "auto");
+                  setEngineOpen(false);
+                }}
                 className={`w-full text-left px-3 py-2 hover:bg-secondary transition-colors ${engine === opt.value ? "bg-primary/5" : ""}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">{opt.label}</span>
-                  {engine === opt.value && <CheckCircle2 size={13} className="text-primary" />}
+                  <span className="text-sm font-medium text-foreground">
+                    {opt.label}
+                  </span>
+                  {engine === opt.value && (
+                    <CheckCircle2 size={13} className="text-primary" />
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground">{opt.desc}</span>
+                <span className="text-xs text-muted-foreground">
+                  {opt.desc}
+                </span>
               </button>
             ))}
           </div>
@@ -439,11 +520,16 @@ function BottomToolbar({
             {(["720p", "1080p"] as const).map(r => (
               <button
                 key={r}
-                onClick={() => { onResolutionChange(r); setResOpen(false); }}
+                onClick={() => {
+                  onResolutionChange(r);
+                  setResOpen(false);
+                }}
                 className={`w-full text-left px-3 py-2 text-sm hover:bg-secondary transition-colors flex items-center justify-between ${resolution === r ? "text-primary font-medium" : "text-foreground"}`}
               >
                 {r}
-                {resolution === r && <CheckCircle2 size={12} className="text-primary" />}
+                {resolution === r && (
+                  <CheckCircle2 size={12} className="text-primary" />
+                )}
               </button>
             ))}
           </div>
@@ -451,25 +537,37 @@ function BottomToolbar({
       </div>
 
       {/* Multi-Shot 开关 */}
-      <button
-        onClick={() => onMultiShotChange(!multiShot)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-          multiShot
-            ? "border-primary/40 bg-primary/5 text-primary"
-            : "border-border text-muted-foreground hover:bg-secondary"
-        }`}
-      >
-        <Layers size={12} />
-        Multi-Shot
-        {multiShot && <CheckCircle2 size={11} />}
-      </button>
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={multiShot}
+            onChange={e => onMultiShotChange(e.target.checked)}
+            className="sr-only"
+          />
+          <div
+            className={`w-7 h-4 rounded-full transition-colors ${multiShot ? "bg-[oklch(0.60_0.20_190)]" : "bg-muted"}`}
+          >
+            <div
+              className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${multiShot ? "translate-x-3.5" : "translate-x-0.5"}`}
+            />
+          </div>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground">
+          Multi-Shot
+        </span>
+      </label>
 
       <div className="w-px h-5 bg-border mx-1" />
 
       {/* 对标视频分析入口 */}
       <button
-        onClick={onAnalyzeVideo}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+        onClick={() => setAnalysisPanelOpen(!analysisPanelOpen)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+          analysisPanelOpen
+            ? "border-[oklch(0.60_0.20_190)] bg-[oklch(0.60_0.20_190)/0.1] text-[oklch(0.60_0.20_190)]"
+            : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+        }`}
         title="上传对标视频，AI 自动分析分镜结构和反推提示词"
       >
         <ScanSearch size={12} />
@@ -477,13 +575,15 @@ function BottomToolbar({
       </button>
 
       {/* 连接状态 */}
-      <div className="ml-auto flex items-center gap-1.5">
+      <div
+        className="ml-auto flex items-center gap-1.5 cursor-help"
+        title={isConnected ? "模型已连接" : "模型未连接"}
+      >
         {isConnected ? (
-          <Wifi size={12} className="text-emerald-500" />
+          <Bot size={12} className="text-[oklch(0.60_0.20_190)]" />
         ) : (
-          <WifiOff size={12} className="text-muted-foreground" />
+          <Bot size={12} className="text-muted-foreground/50" />
         )}
-        <span className="text-xs text-muted-foreground">{isConnected ? "已连接" : "未连接"}</span>
       </div>
 
       {/* 进度指示 */}
@@ -503,7 +603,11 @@ function SceneCard({
   onUpdate,
 }: {
   scene: Scene;
-  onUpdate: (id: number, field: keyof Scene, value: string | number | string[]) => void;
+  onUpdate: (
+    id: number,
+    field: keyof Scene,
+    value: string | number | string[]
+  ) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const shotBadge = scene.shot_mode ? SHOT_MODE_BADGE[scene.shot_mode] : null;
@@ -515,51 +619,107 @@ function SceneCard({
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white shrink-0"
-            style={{ background: "var(--accent)", fontSize: "10px" }}>
+          <span
+            className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white shrink-0"
+            style={{ background: "var(--accent)", fontSize: "10px" }}
+          >
             {scene.scene_id}
           </span>
-          <span className="text-xs font-medium text-foreground">分镜 {scene.scene_id}</span>
-          <Badge variant="outline" className="text-xs py-0 h-4">{scene.duration}s</Badge>
+          <span className="text-xs font-medium text-foreground">
+            分镜 {scene.scene_id}
+          </span>
+          <Badge variant="outline" className="text-xs py-0 h-4">
+            {scene.duration}s
+          </Badge>
           {shotBadge && (
-            <span className={`text-[10px] px-1.5 py-0 rounded border font-medium ${shotBadge.cls}`}>
+            <span
+              className={`text-[10px] px-1.5 py-0 rounded border font-medium ${shotBadge.cls}`}
+            >
               {shotBadge.label}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">{scene.transition}</span>
-          <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          <span className="text-xs text-muted-foreground">
+            {scene.transition}
+          </span>
+          <ChevronDown
+            size={13}
+            className={`text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+          />
         </div>
       </div>
 
       <div className="px-3 pb-3">
         {!expanded ? (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{scene.voiceover}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            {scene.voiceover}
+          </p>
         ) : (
           <div className="space-y-3 pt-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">旁白文案</label>
-              <Textarea value={scene.voiceover} onChange={(e) => onUpdate(scene.scene_id, "voiceover", e.target.value)} className="text-xs min-h-[60px] resize-none" />
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                旁白文案
+              </label>
+              <Textarea
+                value={scene.voiceover}
+                onChange={e =>
+                  onUpdate(scene.scene_id, "voiceover", e.target.value)
+                }
+                className="text-xs min-h-[60px] resize-none"
+              />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">画面描述</label>
-              <Textarea value={scene.image_prompt} onChange={(e) => onUpdate(scene.scene_id, "image_prompt", e.target.value)} className="text-xs min-h-[60px] resize-none" />
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                画面描述
+              </label>
+              <Textarea
+                value={scene.image_prompt}
+                onChange={e =>
+                  onUpdate(scene.scene_id, "image_prompt", e.target.value)
+                }
+                className="text-xs min-h-[60px] resize-none"
+              />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">运动描述</label>
-              <Textarea value={scene.video_prompt} onChange={(e) => onUpdate(scene.scene_id, "video_prompt", e.target.value)} className="text-xs min-h-[50px] resize-none" />
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                运动描述
+              </label>
+              <Textarea
+                value={scene.video_prompt}
+                onChange={e =>
+                  onUpdate(scene.scene_id, "video_prompt", e.target.value)
+                }
+                className="text-xs min-h-[50px] resize-none"
+              />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">时长 (秒)</label>
-                <input type="number" value={scene.duration} onChange={(e) => onUpdate(scene.scene_id, "duration", Number(e.target.value))}
-                  className="w-full text-xs px-2 py-1.5 rounded-md border border-border bg-background" min={1} max={15} />
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                  时长 (秒)
+                </label>
+                <input
+                  type="number"
+                  value={scene.duration}
+                  onChange={e =>
+                    onUpdate(scene.scene_id, "duration", Number(e.target.value))
+                  }
+                  className="w-full text-xs px-2 py-1.5 rounded-md border border-border bg-background"
+                  min={1}
+                  max={15}
+                />
               </div>
               <div className="flex-1">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">转场</label>
-                <select value={scene.transition} onChange={(e) => onUpdate(scene.scene_id, "transition", e.target.value)}
-                  className="w-full text-xs px-2 py-1.5 rounded-md border border-border bg-background">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                  转场
+                </label>
+                <select
+                  value={scene.transition}
+                  onChange={e =>
+                    onUpdate(scene.scene_id, "transition", e.target.value)
+                  }
+                  className="w-full text-xs px-2 py-1.5 rounded-md border border-border bg-background"
+                >
                   <option value="crossfade">交叉淡入</option>
                   <option value="fade">淡入淡出</option>
                   <option value="wipe">划像</option>
@@ -582,7 +742,11 @@ function SceneReviewPanel({
   onCancel,
 }: {
   scenes: Scene[];
-  onUpdate: (id: number, field: keyof Scene, value: string | number | string[]) => void;
+  onUpdate: (
+    id: number,
+    field: keyof Scene,
+    value: string | number | string[]
+  ) => void;
   onApprove: () => void;
   onCancel: () => void;
 }) {
@@ -590,20 +754,42 @@ function SceneReviewPanel({
     <div className="border-t border-border bg-card shrink-0">
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Pencil size={14} style={{ color: "var(--accent-muted-foreground)" }} />
-          <span className="text-sm font-semibold text-foreground">分镜审核 · {scenes.length} 个分镜</span>
-          <span className="text-xs text-muted-foreground">总时长约 {scenes.reduce((s, sc) => s + sc.duration, 0)}s · 点击展开编辑</span>
+          <Pencil
+            size={14}
+            style={{ color: "var(--accent-muted-foreground)" }}
+          />
+          <span className="text-sm font-semibold text-foreground">
+            分镜审核 · {scenes.length} 个分镜
+          </span>
+          <span className="text-xs text-muted-foreground">
+            总时长约 {scenes.reduce((s, sc) => s + sc.duration, 0)}s ·
+            点击展开编辑
+          </span>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={onCancel} className="text-xs gap-1.5"><X size={12} />取消</Button>
-          <Button size="sm" onClick={onApprove} className="text-xs gap-1.5" style={{ background: "var(--primary)" }}>
-            <CheckCircle2 size={12} />确认，开始生成
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onCancel}
+            className="text-xs gap-1.5"
+          >
+            <X size={12} />
+            取消
+          </Button>
+          <Button
+            size="sm"
+            onClick={onApprove}
+            className="text-xs gap-1.5"
+            style={{ background: "var(--primary)" }}
+          >
+            <CheckCircle2 size={12} />
+            确认，开始生成
           </Button>
         </div>
       </div>
       <div className="overflow-y-auto" style={{ maxHeight: "45vh" }}>
         <div className="grid grid-cols-2 gap-3 p-4">
-          {scenes.map((scene) => (
+          {scenes.map(scene => (
             <SceneCard key={scene.scene_id} scene={scene} onUpdate={onUpdate} />
           ))}
         </div>
@@ -641,14 +827,20 @@ function CharacterReplaceCard({
       // 依次上传多张图片，最后一张作为替换图
       let lastPath = "";
       for (const file of files) {
-        const result = await analyzeApi.replaceCharacter(analysisId, character.character_id, file);
+        const result = await analyzeApi.replaceCharacter(
+          analysisId,
+          character.character_id,
+          file
+        );
         lastPath = result.path;
       }
       setReplaced(true);
       onReplaced(character.character_id, lastPath);
       toast.success(`${character.name} 替换参考图已上传（${files.length} 张）`);
     } catch (err: unknown) {
-      toast.error(`上传失败: ${err instanceof Error ? err.message : "未知错误"}`);
+      toast.error(
+        `上传失败: ${err instanceof Error ? err.message : "未知错误"}`
+      );
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -675,16 +867,21 @@ function CharacterReplaceCard({
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-            style={{ background: "var(--accent)" }}>
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            style={{ background: "var(--accent)" }}
+          >
             {character.character_id}
           </div>
-          <span className="text-sm font-semibold text-foreground">{character.name}</span>
+          <span className="text-sm font-semibold text-foreground">
+            {character.name}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           {replaced && (
             <span className="text-xs text-emerald-600 flex items-center gap-1">
-              <CheckCircle2 size={12} />已替换
+              <CheckCircle2 size={12} />
+              已替换
             </span>
           )}
           {replaced && (
@@ -694,18 +891,26 @@ function CharacterReplaceCard({
               className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
               title="删除替换图"
             >
-              {removing ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+              {removing ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <X size={12} />
+              )}
             </button>
           )}
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground leading-relaxed">{character.description}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        {character.description}
+      </p>
 
       {/* 可编辑的 appearance_prompt */}
       <div className="rounded-lg bg-secondary p-2.5 space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground">外观提示词</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            外观提示词
+          </span>
           <div className="flex items-center gap-1">
             <CopyBtn text={localPrompt} />
             <button
@@ -721,30 +926,54 @@ function CharacterReplaceCard({
           <div className="space-y-2">
             <Textarea
               value={localPrompt}
-              onChange={(e) => setLocalPrompt(e.target.value)}
+              onChange={e => setLocalPrompt(e.target.value)}
               className="text-xs font-mono resize-none min-h-[80px] leading-relaxed"
               autoFocus
             />
             <div className="flex gap-2">
-              <Button size="sm" className="flex-1 text-xs h-7" onClick={handlePromptSave} style={{ background: "var(--primary)" }}>
-                <Check size={11} className="mr-1" />保存
+              <Button
+                size="sm"
+                className="flex-1 text-xs h-7"
+                onClick={handlePromptSave}
+                style={{ background: "var(--primary)" }}
+              >
+                <Check size={11} className="mr-1" />
+                保存
               </Button>
-              <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={() => { setLocalPrompt(character.appearance_prompt); setEditingPrompt(false); }}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-xs h-7"
+                onClick={() => {
+                  setLocalPrompt(character.appearance_prompt);
+                  setEditingPrompt(false);
+                }}
+              >
                 取消
               </Button>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-foreground font-mono leading-relaxed">{localPrompt}</p>
+          <p className="text-xs text-foreground font-mono leading-relaxed">
+            {localPrompt}
+          </p>
         )}
       </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700 leading-relaxed">
         <span className="font-semibold">角色一致性：</span>
-        建议上传正/侧/背三视图或四宫格图片（可在 NanoBanana / 豆包中生成），支持多选
+        建议上传正/侧/背三视图或四宫格图片（可在 NanoBanana /
+        豆包中生成），支持多选
       </div>
 
-      <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileChange} />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
       <button
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
@@ -755,8 +984,15 @@ function CharacterReplaceCard({
         }`}
       >
         {uploading ? (
-          <span className="flex items-center justify-center gap-1.5"><Loader2 size={12} className="animate-spin" />上传中...</span>
-        ) : replaced ? "重新上传替换参考图（支持多选）" : "上传替换参考图（图片/视频，可多选）"}
+          <span className="flex items-center justify-center gap-1.5">
+            <Loader2 size={12} className="animate-spin" />
+            上传中...
+          </span>
+        ) : replaced ? (
+          "重新上传替换参考图（支持多选）"
+        ) : (
+          "上传替换参考图（图片/视频，可多选）"
+        )}
       </button>
     </div>
   );
@@ -773,7 +1009,11 @@ function ScenePromptRow({
   scene: ReferenceScene;
   reversePrompt: string;
   index: number;
-  onSceneChange: (idx: number, field: keyof ReferenceScene, value: string | number) => void;
+  onSceneChange: (
+    idx: number,
+    field: keyof ReferenceScene,
+    value: string | number
+  ) => void;
   onReversePromptChange: (idx: number, value: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -786,18 +1026,29 @@ function ScenePromptRow({
         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-secondary/50 transition-colors text-left"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">#{index + 1}</span>
+          <span className="text-xs font-mono text-muted-foreground w-5 shrink-0">
+            #{index + 1}
+          </span>
           {shotBadge && (
-            <span className={`text-[10px] px-1.5 py-0 rounded border font-medium shrink-0 ${shotBadge.cls}`}>
+            <span
+              className={`text-[10px] px-1.5 py-0 rounded border font-medium shrink-0 ${shotBadge.cls}`}
+            >
               {shotBadge.label}
             </span>
           )}
-          <span className="text-xs text-muted-foreground shrink-0">{scene.duration}s</span>
-          <span className="text-xs text-foreground truncate">{scene.voiceover || scene.image_prompt.slice(0, 35) + "..."}</span>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {scene.duration}s
+          </span>
+          <span className="text-xs text-foreground truncate">
+            {scene.voiceover || scene.image_prompt.slice(0, 35) + "..."}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <Edit3 size={11} className="text-muted-foreground" />
-          <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          <ChevronDown
+            size={13}
+            className={`text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+          />
         </div>
       </button>
 
@@ -807,7 +1058,7 @@ function ScenePromptRow({
           <EditableField
             label="反推提示词（可直接复用）"
             value={reversePrompt}
-            onChange={(v) => onReversePromptChange(index, v)}
+            onChange={v => onReversePromptChange(index, v)}
             rows={3}
             mono
           />
@@ -815,14 +1066,14 @@ function ScenePromptRow({
           <EditableField
             label="旁白文案"
             value={scene.voiceover}
-            onChange={(v) => onSceneChange(index, "voiceover", v)}
+            onChange={v => onSceneChange(index, "voiceover", v)}
             rows={2}
           />
           {/* 生图提示词 */}
           <EditableField
             label="生图提示词"
             value={scene.image_prompt}
-            onChange={(v) => onSceneChange(index, "image_prompt", v)}
+            onChange={v => onSceneChange(index, "image_prompt", v)}
             rows={3}
             mono
           />
@@ -830,19 +1081,24 @@ function ScenePromptRow({
           <EditableField
             label="运动提示词"
             value={scene.video_prompt}
-            onChange={(v) => onSceneChange(index, "video_prompt", v)}
+            onChange={v => onSceneChange(index, "video_prompt", v)}
             rows={2}
             mono
           />
           {/* 时长 */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground w-16 shrink-0">时长 (秒)</label>
+            <label className="text-xs text-muted-foreground w-16 shrink-0">
+              时长 (秒)
+            </label>
             <input
               type="number"
               value={scene.duration}
-              onChange={(e) => onSceneChange(index, "duration", Number(e.target.value))}
+              onChange={e =>
+                onSceneChange(index, "duration", Number(e.target.value))
+              }
               className="w-20 text-xs px-2 py-1.5 rounded-md border border-border bg-background"
-              min={1} max={15}
+              min={1}
+              max={15}
             />
           </div>
         </div>
@@ -859,49 +1115,67 @@ function AnalysisPanel({
 }: {
   open: boolean;
   onClose: () => void;
-  onCreateProject: (analysisId: string, result: ReferenceVideoAnalysisResult) => void;
+  onCreateProject: (
+    analysisId: string,
+    result: ReferenceVideoAnalysisResult
+  ) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
-  const [analysisData, setAnalysisData] = useState<ReferenceAnalysisResponse | null>(null);
+  const [analysisData, setAnalysisData] =
+    useState<ReferenceAnalysisResponse | null>(null);
   const [polling, setPolling] = useState(false);
-  const [activeTab, setActiveTab] = useState<"characters" | "scenes" | "overall">("characters");
+  const [activeTab, setActiveTab] = useState<
+    "characters" | "scenes" | "overall"
+  >("characters");
   // 本地可编辑的分析结果（独立于 analysisData，避免影响轮询）
-  const [editableResult, setEditableResult] = useState<ReferenceVideoAnalysisResult | null>(null);
-  const [editableReversePrompts, setEditableReversePrompts] = useState<string[]>([]);
+  const [editableResult, setEditableResult] =
+    useState<ReferenceVideoAnalysisResult | null>(null);
+  const [editableReversePrompts, setEditableReversePrompts] = useState<
+    string[]
+  >([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
     setPolling(false);
   }, []);
 
-  const startPolling = useCallback((id: string) => {
-    setPolling(true);
-    pollRef.current = setInterval(async () => {
-      try {
-        const data = await analyzeApi.getAnalysis(id);
-        setAnalysisData(data);
-        if (data.status === "completed" && data.result) {
-          // 初始化可编辑副本
-          setEditableResult(JSON.parse(JSON.stringify(data.result)));
-          setEditableReversePrompts([...(data.result.reverse_prompts || [])]);
-          stopPolling();
-        } else if (data.status === "failed") {
+  const startPolling = useCallback(
+    (id: string) => {
+      setPolling(true);
+      pollRef.current = setInterval(async () => {
+        try {
+          const data = await analyzeApi.getAnalysis(id);
+          setAnalysisData(data);
+          if (data.status === "completed" && data.result) {
+            // 初始化可编辑副本
+            setEditableResult(JSON.parse(JSON.stringify(data.result)));
+            setEditableReversePrompts([...(data.result.reverse_prompts || [])]);
+            stopPolling();
+          } else if (data.status === "failed") {
+            stopPolling();
+          }
+        } catch {
           stopPolling();
         }
-      } catch {
-        stopPolling();
-      }
-    }, 2000);
-  }, [stopPolling]);
+      }, 2000);
+    },
+    [stopPolling]
+  );
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
   const handleUpload = async (file: File) => {
-    if (!file.type.startsWith("video/")) { toast.error("请上传视频文件"); return; }
+    if (!file.type.startsWith("video/")) {
+      toast.error("请上传视频文件");
+      return;
+    }
     setUploading(true);
     setAnalysisData(null);
     setAnalysisId(null);
@@ -926,7 +1200,8 @@ function AnalysisPanel({
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDragOver(false);
+    e.preventDefault();
+    setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) handleUpload(file);
   };
@@ -938,7 +1213,9 @@ function AnalysisPanel({
       return {
         ...prev,
         characters: prev.characters.map(c =>
-          c.character_id === characterId ? { ...c, replacement_image: imagePath } : c
+          c.character_id === characterId
+            ? { ...c, replacement_image: imagePath }
+            : c
         ),
       };
     });
@@ -954,13 +1231,17 @@ function AnalysisPanel({
         return {
           ...prev,
           characters: prev.characters.map(c =>
-            c.character_id === characterId ? { ...c, replacement_image: undefined } : c
+            c.character_id === characterId
+              ? { ...c, replacement_image: undefined }
+              : c
           ),
         };
       });
       toast.success("替换参考图已删除");
     } catch (err: unknown) {
-      toast.error(`删除失败: ${err instanceof Error ? err.message : "未知错误"}`);
+      toast.error(
+        `删除失败: ${err instanceof Error ? err.message : "未知错误"}`
+      );
     }
   };
 
@@ -971,14 +1252,20 @@ function AnalysisPanel({
       return {
         ...prev,
         characters: prev.characters.map(c =>
-          c.character_id === characterId ? { ...c, appearance_prompt: prompt } : c
+          c.character_id === characterId
+            ? { ...c, appearance_prompt: prompt }
+            : c
         ),
       };
     });
   };
 
   // 更新分镜字段
-  const handleSceneChange = (idx: number, field: keyof ReferenceScene, value: string | number) => {
+  const handleSceneChange = (
+    idx: number,
+    field: keyof ReferenceScene,
+    value: string | number
+  ) => {
     setEditableResult(prev => {
       if (!prev) return prev;
       const scenes = [...prev.scenes];
@@ -997,8 +1284,11 @@ function AnalysisPanel({
   };
 
   // 更新整体字段
-  const handleOverallChange = (field: keyof ReferenceVideoAnalysisResult, value: string) => {
-    setEditableResult(prev => prev ? { ...prev, [field]: value } : prev);
+  const handleOverallChange = (
+    field: keyof ReferenceVideoAnalysisResult,
+    value: string
+  ) => {
+    setEditableResult(prev => (prev ? { ...prev, [field]: value } : prev));
   };
 
   if (!open) return null;
@@ -1006,24 +1296,37 @@ function AnalysisPanel({
   const result = editableResult;
 
   return (
-    <aside className="w-96 border-l border-border bg-card flex flex-col shrink-0 h-screen" style={{ minHeight: 0 }}>
+    <aside
+      className="w-96 border-l border-border/50 bg-background/80 backdrop-blur-md flex flex-col shrink-0 h-screen"
+      style={{ minHeight: 0 }}
+    >
       {/* 头部 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
         <div className="flex items-center gap-2">
-          <ScanSearch size={15} style={{ color: "var(--accent-muted-foreground)" }} />
-          <span className="text-sm font-semibold text-foreground">对标视频分析</span>
+          <ScanSearch size={15} className="text-[oklch(0.60_0.20_190)]" />
+          <span
+            className="text-sm font-semibold bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] bg-clip-text text-transparent"
+            style={{ fontFamily: "'Playfair Display', serif" }}
+          >
+            对标视频分析
+          </span>
           {analysisData?.status === "processing" && (
             <span className="flex items-center gap-1 text-xs text-blue-500">
-              <Loader2 size={11} className="animate-spin" />分析中
+              <Loader2 size={11} className="animate-spin" />
+              分析中
             </span>
           )}
           {analysisData?.status === "completed" && (
             <span className="text-xs text-emerald-600 flex items-center gap-1">
-              <CheckCircle2 size={11} />完成
+              <CheckCircle2 size={11} />
+              完成
             </span>
           )}
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button
+          onClick={onClose}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
           <X size={16} />
         </button>
       </div>
@@ -1033,36 +1336,69 @@ function AnalysisPanel({
           {/* 上传区 */}
           {!analysisData && (
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragOver={e => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-secondary/50"
+                dragOver
+                  ? "border-[oklch(0.60_0.20_190)] bg-[oklch(0.60_0.20_190)/0.05]"
+                  : "border-border/50 hover:border-[oklch(0.60_0.20_190)/0.5] hover:bg-[oklch(0.60_0.20_190)/0.03]"
               }`}
             >
-              <input ref={fileRef} type="file" accept="video/*" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }} />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUpload(f);
+                  e.target.value = "";
+                }}
+              />
               {uploading ? (
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 size={32} className="animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">上传中，请稍候...</p>
+                  <Loader2
+                    size={32}
+                    className="animate-spin text-[oklch(0.60_0.20_190)]"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    上传中，请稍候...
+                  </p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--accent-muted)" }}>
-                    <Upload size={24} style={{ color: "var(--accent-muted-foreground)" }} />
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[oklch(0.55_0.22_270)/0.15] to-[oklch(0.60_0.20_190)/0.1] border border-[oklch(0.55_0.22_270)/0.2]">
+                    <Upload size={24} className="text-[oklch(0.60_0.20_190)]" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-foreground mb-1">上传对标视频</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      拖拽或点击上传，Gemini 自动分析<br />分镜结构、人物、风格、反推提示词
+                    <p
+                      className="text-sm font-semibold text-foreground mb-1"
+                      style={{ fontFamily: "'Playfair Display', serif" }}
+                    >
+                      上传对标视频
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 leading-relaxed">
+                      拖拽或点击上传，Gemini 自动分析
+                      <br />
+                      分镜结构、人物、风格，反推提示词
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5 justify-center">
-                    {["分镜反推", "人物识别", "风格提取", "运镜分析"].map(tag => (
-                      <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{tag}</span>
-                    ))}
+                    {["分镜反推", "人物识别", "风格提取", "运镜分析"].map(
+                      tag => (
+                        <span
+                          key={tag}
+                          className="text-xs px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground/60"
+                        >
+                          {tag}
+                        </span>
+                      )
+                    )}
                   </div>
                 </div>
               )}
@@ -1076,8 +1412,12 @@ function AnalysisPanel({
                 <Loader2 size={24} className="animate-spin text-blue-500" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">Gemini 正在分析视频</p>
-                <p className="text-xs text-muted-foreground mt-1">通常需要 30-60 秒</p>
+                <p className="text-sm font-semibold text-foreground">
+                  Gemini 正在分析视频
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  通常需要 30-60 秒
+                </p>
               </div>
             </div>
           )}
@@ -1088,8 +1428,16 @@ function AnalysisPanel({
               <AlertCircle size={20} className="text-red-500 mx-auto mb-2" />
               <p className="text-sm text-red-700 font-medium">分析失败</p>
               <p className="text-xs text-red-500 mt-1">{analysisData.error}</p>
-              <button onClick={() => { setAnalysisData(null); setAnalysisId(null); setEditableResult(null); }}
-                className="mt-3 text-xs text-red-600 underline">重新上传</button>
+              <button
+                onClick={() => {
+                  setAnalysisData(null);
+                  setAnalysisId(null);
+                  setEditableResult(null);
+                }}
+                className="mt-3 text-xs text-red-600 underline"
+              >
+                重新上传
+              </button>
             </div>
           )}
 
@@ -1099,30 +1447,48 @@ function AnalysisPanel({
               {/* 视频概览（可编辑标题和风格） */}
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">视频标题</label>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-1">
+                    视频标题
+                  </label>
                   <input
                     value={result.title}
-                    onChange={(e) => handleOverallChange("title", e.target.value)}
+                    onChange={e => handleOverallChange("title", e.target.value)}
                     className="w-full text-sm font-semibold px-2 py-1.5 rounded-md border border-border bg-background"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">风格</label>
-                    <input value={result.style} onChange={(e) => handleOverallChange("style", e.target.value)}
-                      className="w-full text-xs px-2 py-1 rounded border border-border bg-background" />
+                    <label className="text-xs text-muted-foreground block mb-1">
+                      风格
+                    </label>
+                    <input
+                      value={result.style}
+                      onChange={e =>
+                        handleOverallChange("style", e.target.value)
+                      }
+                      className="w-full text-xs px-2 py-1 rounded border border-border bg-background"
+                    />
                   </div>
                   <div className="flex items-center gap-1.5 text-muted-foreground pt-4">
-                    <span className="font-medium text-foreground">时长：</span>{result.total_duration.toFixed(0)}s
+                    <span className="font-medium text-foreground">时长：</span>
+                    {result.total_duration.toFixed(0)}s
                   </div>
                   <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <span className="font-medium text-foreground">比例：</span>{result.aspect_ratio}
+                    <span className="font-medium text-foreground">比例：</span>
+                    {result.aspect_ratio}
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">BGM 风格</label>
-                    <input value={result.bgm_style} onChange={(e) => handleOverallChange("bgm_style", e.target.value)}
-                      className="w-full text-xs px-2 py-1 rounded border border-border bg-background" />
+                    <label className="text-xs text-muted-foreground block mb-1">
+                      BGM 风格
+                    </label>
+                    <input
+                      value={result.bgm_style}
+                      onChange={e =>
+                        handleOverallChange("bgm_style", e.target.value)
+                      }
+                      className="w-full text-xs px-2 py-1 rounded border border-border bg-background"
+                    />
                   </div>
                 </div>
               </div>
@@ -1134,10 +1500,16 @@ function AnalysisPanel({
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      activeTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      activeTab === tab
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    {tab === "characters" ? `人物 (${result.characters.length})` : tab === "scenes" ? `分镜 (${result.scenes.length})` : "整体"}
+                    {tab === "characters"
+                      ? `人物 (${result.characters.length})`
+                      : tab === "scenes"
+                        ? `分镜 (${result.scenes.length})`
+                        : "整体"}
                   </button>
                 ))}
               </div>
@@ -1146,9 +1518,11 @@ function AnalysisPanel({
               {activeTab === "characters" && (
                 <div className="space-y-3">
                   {result.characters.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">未检测到明显人物</p>
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      未检测到明显人物
+                    </p>
                   ) : (
-                    result.characters.map((char) => (
+                    result.characters.map(char => (
                       <CharacterReplaceCard
                         key={char.character_id}
                         character={char}
@@ -1184,14 +1558,14 @@ function AnalysisPanel({
                   <EditableField
                     label="整体风格提示词"
                     value={result.overall_prompt}
-                    onChange={(v) => handleOverallChange("overall_prompt", v)}
+                    onChange={v => handleOverallChange("overall_prompt", v)}
                     rows={4}
                     mono
                   />
                   <EditableField
                     label="调色风格"
                     value={result.color_grade}
-                    onChange={(v) => handleOverallChange("color_grade", v)}
+                    onChange={v => handleOverallChange("color_grade", v)}
                     rows={2}
                   />
                 </div>
@@ -1216,7 +1590,11 @@ function AnalysisPanel({
 
               {/* 重新上传 */}
               <button
-                onClick={() => { setAnalysisData(null); setAnalysisId(null); setEditableResult(null); }}
+                onClick={() => {
+                  setAnalysisData(null);
+                  setAnalysisId(null);
+                  setEditableResult(null);
+                }}
                 className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
               >
                 重新上传其他视频
@@ -1268,7 +1646,13 @@ function AgentConsole({
     error: "text-red-500",
     progress: "text-blue-500",
   };
-  const logPrefixes = { info: "·", success: "✓", warning: "⚠", error: "✗", progress: "→" };
+  const logPrefixes = {
+    info: "·",
+    success: "✓",
+    warning: "⚠",
+    error: "✗",
+    progress: "→",
+  };
 
   const stageSteps = [
     { key: "generating_script", icon: Sparkles, label: "脚本生成" },
@@ -1278,32 +1662,58 @@ function AgentConsole({
     { key: "generating_video", icon: Video, label: "视频生成" },
     { key: "assembling", icon: Scissors, label: "拼接成片" },
   ];
-  const stageOrder = ["generating_script", "awaiting_review", "generating_images", "generating_audio", "generating_video", "assembling", "completed"];
+  const stageOrder = [
+    "generating_script",
+    "awaiting_review",
+    "generating_images",
+    "generating_audio",
+    "generating_video",
+    "assembling",
+    "completed",
+  ];
   const currentIdx = stageOrder.indexOf(stage);
 
   if (collapsed) {
     return (
-      <div className="w-12 border-l border-border bg-card flex flex-col items-center py-4 gap-3 shrink-0">
-        <button onClick={onToggle} className="p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" title="展开控制台">
+      <div className="w-12 border-l border-border/50 bg-background/50 flex flex-col items-center py-4 gap-3 shrink-0">
+        <button
+          onClick={onToggle}
+          className="p-2 rounded-lg text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
+          title="展开控制台"
+        >
           <ChevronLeft size={16} />
         </button>
-        <div className={`w-2 h-2 rounded-full ${
-          stage === "failed" ? "bg-red-400" : stage === "completed" ? "bg-emerald-400" : stage === "idle" ? "bg-gray-300" : "bg-blue-400 animate-pulse"
-        }`} title={STAGE_LABELS[stage]} />
+        <div
+          className={`w-2 h-2 rounded-full ${
+            stage === "failed"
+              ? "bg-red-400"
+              : stage === "completed"
+                ? "bg-emerald-400"
+                : stage === "idle"
+                  ? "bg-gray-300"
+                  : "bg-blue-400 animate-pulse"
+          }`}
+          title={STAGE_LABELS[stage]}
+        />
       </div>
     );
   }
 
   return (
-    <aside className="w-72 border-l border-border bg-card flex flex-col shrink-0 h-screen" style={{ minHeight: 0 }}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+    <aside
+      className="w-72 border-l border-border/50 bg-background/50 flex flex-col shrink-0 h-screen"
+      style={{ minHeight: 0 }}
+    >
+      {/* 原有的工作流头部 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
-            stage === "failed" ? "bg-red-400" : stage === "completed" ? "bg-emerald-400" : stage === "idle" ? "bg-gray-300" : "bg-blue-400 animate-pulse"
-          }`} />
-          <span className="text-sm font-semibold text-foreground">Agent 控制台</span>
+          <Zap size={14} className="text-[oklch(0.60_0.20_190)]" />
+          <span className="text-sm font-semibold text-foreground">工作流</span>
         </div>
-        <button onClick={onToggle} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button
+          onClick={onToggle}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+        >
           <ChevronRight size={16} />
         </button>
       </div>
@@ -1311,24 +1721,54 @@ function AgentConsole({
       {/* 进度 */}
       <div className="px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground">{STAGE_LABELS[stage]}</span>
-          <span className="text-xs text-muted-foreground font-mono">{STAGE_PROGRESS[stage]}%</span>
+          <span className="text-xs font-medium text-foreground">
+            {STAGE_LABELS[stage]}
+          </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            {STAGE_PROGRESS[stage]}%
+          </span>
         </div>
-        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
-          <div className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${STAGE_PROGRESS[stage]}%`, background: stage === "failed" ? "var(--destructive)" : "var(--accent)" }} />
+        <div
+          className="w-full h-1.5 rounded-full overflow-hidden"
+          style={{ background: "var(--muted)" }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${STAGE_PROGRESS[stage]}%`,
+              background:
+                stage === "failed" ? "var(--destructive)" : "var(--accent)",
+            }}
+          />
         </div>
         <div className="mt-3 space-y-1">
-          {stageSteps.map((step) => {
+          {stageSteps.map(step => {
             const stepIdx = stageOrder.indexOf(step.key);
             const isDone = currentIdx > stepIdx;
             const isCurrent = currentIdx === stepIdx;
             return (
               <div key={step.key} className="flex items-center gap-2 py-0.5">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isDone ? "bg-emerald-500" : isCurrent ? "bg-blue-500" : "bg-muted"}`}>
-                  {isDone ? <CheckCircle2 size={10} className="text-white" /> : isCurrent ? <Loader2 size={10} className="text-white animate-spin" /> : <step.icon size={10} className="text-muted-foreground" />}
+                <div
+                  className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isDone ? "bg-emerald-500" : isCurrent ? "bg-blue-500" : "bg-muted"}`}
+                >
+                  {isDone ? (
+                    <CheckCircle2 size={10} className="text-white" />
+                  ) : isCurrent ? (
+                    <Loader2 size={10} className="text-white animate-spin" />
+                  ) : (
+                    <step.icon size={10} className="text-muted-foreground" />
+                  )}
                 </div>
-                <span className={`text-xs ${isCurrent ? "text-foreground font-medium" : ""}`} style={{ color: isCurrent ? "var(--foreground)" : "var(--muted-foreground)" }}>{step.label}</span>
+                <span
+                  className={`text-xs ${isCurrent ? "text-foreground font-medium" : ""}`}
+                  style={{
+                    color: isCurrent
+                      ? "var(--foreground)"
+                      : "var(--muted-foreground)",
+                  }}
+                >
+                  {step.label}
+                </span>
               </div>
             );
           })}
@@ -1338,17 +1778,25 @@ function AgentConsole({
       {/* 日志 */}
       <div className="flex-1 overflow-y-auto px-4 py-3">
         <div className="space-y-1 font-mono">
-          {logs.map((log) => (
+          {logs.map(log => (
             <div key={log.id} className="text-xs leading-relaxed">
               <span className="text-muted-foreground/50 mr-2">{log.time}</span>
-              <span className={`mr-1.5 ${logColors[log.level]}`}>{logPrefixes[log.level]}</span>
+              <span className={`mr-1.5 ${logColors[log.level]}`}>
+                {logPrefixes[log.level]}
+              </span>
               <span className={logColors[log.level]}>{log.message}</span>
-              {log.detail && <div className="pl-8 text-muted-foreground/60 text-xs mt-0.5">{log.detail}</div>}
+              {log.detail && (
+                <div className="pl-8 text-muted-foreground/60 text-xs mt-0.5">
+                  {log.detail}
+                </div>
+              )}
             </div>
           ))}
           {stage !== "idle" && stage !== "completed" && stage !== "failed" && (
             <div className="text-xs text-muted-foreground/50 flex items-center gap-1">
-              <span>{new Date().toLocaleTimeString("zh-CN", { hour12: false })}</span>
+              <span>
+                {new Date().toLocaleTimeString("zh-CN", { hour12: false })}
+              </span>
               <span className="animate-pulse">▋</span>
             </div>
           )}
@@ -1361,24 +1809,53 @@ function AgentConsole({
         <div className="p-4 border-t border-border space-y-3 shrink-0">
           {!feedbackGiven && (
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-2">对本次生成结果评分</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                对本次生成结果评分
+              </p>
               <div className="flex items-center justify-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button key={star} onMouseEnter={() => setHoveredStar(star)} onMouseLeave={() => setHoveredStar(0)}
-                    onClick={() => { onFeedback(star); setFeedbackGiven(true); toast.success(`感谢评分 ${star} 星！`); }}
-                    className="transition-transform hover:scale-110">
-                    <Star size={18} className={star <= hoveredStar ? "text-amber-400 fill-amber-400" : "text-muted-foreground"} />
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onMouseEnter={() => setHoveredStar(star)}
+                    onMouseLeave={() => setHoveredStar(0)}
+                    onClick={() => {
+                      onFeedback(star);
+                      setFeedbackGiven(true);
+                      toast.success(`感谢评分 ${star} 星！`);
+                    }}
+                    className="transition-transform hover:scale-110"
+                  >
+                    <Star
+                      size={18}
+                      className={
+                        star <= hoveredStar
+                          ? "text-amber-400 fill-amber-400"
+                          : "text-muted-foreground"
+                      }
+                    />
                   </button>
                 ))}
               </div>
             </div>
           )}
-          {feedbackGiven && <p className="text-xs text-center text-emerald-600">✓ 评分已记录</p>}
-          <Button className="w-full gap-2 text-sm" onClick={onDownload} style={{ background: "var(--primary)" }}>
-            <Download size={14} />下载成片 MP4
+          {feedbackGiven && (
+            <p className="text-xs text-center text-emerald-600">✓ 评分已记录</p>
+          )}
+          <Button
+            className="w-full gap-2 text-sm"
+            onClick={onDownload}
+            style={{ background: "var(--primary)" }}
+          >
+            <Download size={14} />
+            下载成片 MP4
           </Button>
-          <Button variant="outline" className="w-full gap-2 text-sm" onClick={onExportDraft}>
-            <Scissors size={14} />导出剪映草稿
+          <Button
+            variant="outline"
+            className="w-full gap-2 text-sm"
+            onClick={onExportDraft}
+          >
+            <Scissors size={14} />
+            导出剪映草稿
           </Button>
         </div>
       )}
@@ -1389,13 +1866,27 @@ function AgentConsole({
             <AlertCircle size={14} />
             <span className="text-xs font-medium">生成失败</span>
           </div>
-          <p className="text-xs text-muted-foreground mb-3">请检查 API Keys 配置，或查看日志了解详情。</p>
-          <Button variant="outline" size="sm" className="w-full gap-2 text-xs mb-2" onClick={onRetry}>
-            <RefreshCw size={12} />重试（从头开始）
+          <p className="text-xs text-muted-foreground mb-3">
+            请检查 API Keys 配置，或查看日志了解详情。
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 text-xs mb-2"
+            onClick={onRetry}
+          >
+            <RefreshCw size={12} />
+            重试（从头开始）
           </Button>
           {onResume && (
-            <Button variant="default" size="sm" className="w-full gap-2 text-xs" onClick={onResume}>
-              <RefreshCw size={12} />断点续传（复用已有图片+配音）
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full gap-2 text-xs"
+              onClick={onResume}
+            >
+              <RefreshCw size={12} />
+              断点续传（复用已有图片+配音）
             </Button>
           )}
         </div>
@@ -1409,59 +1900,136 @@ export default function Studio() {
   const params = useParams<{ projectId?: string }>();
   const [, setLocation] = useLocation();
   const { isAdmin, authEnabled } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  const [openDialog, setOpenDialog] = useState<DialogType>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [analysisPanelOpen, setAnalysisPanelOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [backendOnline, setBackendOnline] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node))
+        setLangOpen(false);
+      if (themeRef.current && !themeRef.current.contains(e.target as Node))
+        setThemeOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const languages = [
+    { code: "zh-CN", name: "简体中文", key: "simplifiedChinese" },
+    { code: "en-US", name: "English", key: "english" },
+    { code: "zh-TW", name: "繁体中文", key: "traditionalChinese" },
+    { code: "ja", name: "日本語", key: "japanese" },
+    { code: "ko", name: "한국어", key: "korean" },
+  ];
+
+  const themes = [
+    { value: "light", icon: Sun, key: "themeLight" },
+    { value: "dark", icon: Moon, key: "themeDark" },
+    { value: "system", icon: Monitor, key: "themeSystem" },
+  ];
 
   // ─── localStorage 对话持久化 ─────────────────────────────────────────────────
   const CHAT_KEY = (pid: string) => `opendoor_chat_${pid}`;
 
   const saveMsgsToStorage = useCallback((pid: string, msgs: ChatMessage[]) => {
     try {
-      const serializable = msgs.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
+      const serializable = msgs.map(m => ({
+        ...m,
+        timestamp: m.timestamp.toISOString(),
+      }));
       localStorage.setItem(CHAT_KEY(pid), JSON.stringify(serializable));
-    } catch { /* quota exceeded 等异常静默处理 */ }
+    } catch {
+      /* quota exceeded 等异常静默处理 */
+    }
   }, []);
 
   const loadMsgsFromStorage = useCallback((pid: string): ChatMessage[] => {
     try {
       const raw = localStorage.getItem(CHAT_KEY(pid));
       if (!raw) return [];
-      const arr = JSON.parse(raw) as Array<{ id: string; role: string; content: string; timestamp: string }>;
-      return arr.map(m => ({ ...m, role: m.role as "user" | "assistant", timestamp: new Date(m.timestamp) }));
-    } catch { return []; }
+      const arr = JSON.parse(raw) as Array<{
+        id: string;
+        role: string;
+        content: string;
+        timestamp: string;
+      }>;
+      return arr.map(m => ({
+        ...m,
+        role: m.role as "user" | "assistant",
+        timestamp: new Date(m.timestamp),
+      }));
+    } catch {
+      return [];
+    }
   }, []);
   const [referenceImages, setReferenceImages] = useState<UploadResult[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [input, setInput] = useState("");
   // 保存上次工作流参数，用于重试
-  const [lastWorkflowParams, setLastWorkflowParams] = useState<Parameters<typeof startWorkflow>[0] | null>(null);
+  const [lastWorkflowParams, setLastWorkflowParams] = useState<
+    Parameters<typeof startWorkflow>[0] | null
+  >(null);
   const [engine, setEngine] = useState<"kling" | "seedance" | "auto">("kling");
   const [multiShot, setMultiShot] = useState(true);
   const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { state: workflow, startWorkflow, submitReview, updateScene, submitFeedback, reset, restoreProject, resumeProject } = useWorkflow();
+  const {
+    state: workflow,
+    startWorkflow,
+    submitReview,
+    updateScene,
+    submitFeedback,
+    reset,
+    restoreProject,
+    resumeProject,
+  } = useWorkflow();
   const { projects, refetch: refetchProjects } = useProjects();
 
-  const addChatMessage = useCallback((role: "user" | "assistant", content: string) => {
-    setMessages((prev) => {
-      const newMsg: ChatMessage = { id: `${Date.now()}-${Math.random()}`, role, content, timestamp: new Date() };
-      const updated = [...prev, newMsg];
-      // 如果当前有关联项目，同步保存到 localStorage
-      const pid = workflow.projectId;
-      if (pid) {
-        try {
-          const serializable = updated.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
-          localStorage.setItem(`opendoor_chat_${pid}`, JSON.stringify(serializable));
-        } catch { /* 静默处理 */ }
-      }
-      return updated;
-    });
-  }, [workflow.projectId]);
+  const addChatMessage = useCallback(
+    (role: "user" | "assistant", content: string) => {
+      setMessages(prev => {
+        const newMsg: ChatMessage = {
+          id: `${Date.now()}-${Math.random()}`,
+          role,
+          content,
+          timestamp: new Date(),
+        };
+        const updated = [...prev, newMsg];
+        // 如果当前有关联项目，同步保存到 localStorage
+        const pid = workflow.projectId;
+        if (pid) {
+          try {
+            const serializable = updated.map(m => ({
+              ...m,
+              timestamp: m.timestamp.toISOString(),
+            }));
+            localStorage.setItem(
+              `opendoor_chat_${pid}`,
+              JSON.stringify(serializable)
+            );
+          } catch {
+            /* 静默处理 */
+          }
+        }
+        return updated;
+      });
+    },
+    [workflow.projectId]
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1477,7 +2045,7 @@ export default function Studio() {
         saveMsgsToStorage(pid, messages);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflow.projectId]);
 
   useEffect(() => {
@@ -1487,34 +2055,54 @@ export default function Studio() {
       setCurrentProjectId(params.projectId);
       restoreProject(params.projectId);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.projectId]);
 
   useEffect(() => {
     const stage = workflow.stage;
     const script = workflow.script;
     if (stage === "awaiting_review" && script) {
-      addChatMessage("assistant", `脚本生成完成！共 **${script.scenes.length} 个分镜**，总时长约 **${script.total_duration.toFixed(0)} 秒**。\n\n标题：《${script.title}》\n\n请在下方审核每个分镜，展开可编辑旁白/画面描述/运动描述，确认后点击「确认，开始生成」。`);
+      addChatMessage(
+        "assistant",
+        `脚本生成完成！共 **${script.scenes.length} 个分镜**，总时长约 **${script.total_duration.toFixed(0)} 秒**。\n\n标题：《${script.title}》\n\n请在下方审核每个分镜，展开可编辑旁白/画面描述/运动描述，确认后点击「确认，开始生成」。`
+      );
     } else if (stage === "generating_images") {
-      addChatMessage("assistant", "✅ 脚本已确认！正在并行生成首帧图像和 TTS 配音...");
+      addChatMessage(
+        "assistant",
+        "✅ 脚本已确认！正在并行生成首帧图像和 TTS 配音..."
+      );
     } else if (stage === "generating_video") {
-      addChatMessage("assistant", "🎨 首帧和配音生成完成！正在调用 Kling Omni 视频引擎...");
+      addChatMessage(
+        "assistant",
+        "🎨 首帧和配音生成完成！正在调用 Kling Omni 视频引擎..."
+      );
     } else if (stage === "assembling") {
       addChatMessage("assistant", "🎬 所有片段生成完毕！正在拼接成片...");
     } else if (stage === "completed" && workflow.result) {
-      addChatMessage("assistant", `🎉 视频生成完成！成片时长：**${workflow.result.total_duration.toFixed(1)} 秒**\n\n右侧控制台可下载 MP4 或导出剪映草稿。`);
+      addChatMessage(
+        "assistant",
+        `🎉 视频生成完成！成片时长：**${workflow.result.total_duration.toFixed(1)} 秒**\n\n右侧控制台可下载 MP4 或导出剪映草稿。`
+      );
       refetchProjects();
     } else if (stage === "failed" && workflow.error) {
-      addChatMessage("assistant", `❌ 生成失败：${workflow.error}\n\n请检查 API Keys 配置后重试。`);
+      addChatMessage(
+        "assistant",
+        `❌ 生成失败：${workflow.error}\n\n请检查 API Keys 配置后重试。`
+      );
     }
   }, [workflow.stage, addChatMessage, refetchProjects]);
 
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/health`, { signal: AbortSignal.timeout(3000) });
+        const res = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/health`,
+          { signal: AbortSignal.timeout(3000) }
+        );
         setBackendOnline(res.ok);
-      } catch { setBackendOnline(false); }
+      } catch {
+        setBackendOnline(false);
+      }
     };
     check();
     const timer = setInterval(check, 5000);
@@ -1529,14 +2117,20 @@ export default function Studio() {
       for (const file of files) {
         try {
           const result = await uploadApi.uploadReference(file);
-          setReferenceImages((prev) => [...prev, result]);
+          setReferenceImages(prev => [...prev, result]);
           successCount++;
         } catch (err) {
-          toast.error(`${file.name} 上传失败：${err instanceof Error ? err.message : "未知错误"}`);
+          toast.error(
+            `${file.name} 上传失败：${err instanceof Error ? err.message : "未知错误"}`
+          );
         }
       }
       if (successCount > 0) {
-        toast.success(successCount === 1 ? "参考图上传成功" : `${successCount} 张参考图上传成功`);
+        toast.success(
+          successCount === 1
+            ? "参考图上传成功"
+            : `${successCount} 张参考图上传成功`
+        );
       }
     } finally {
       setIsUploading(false);
@@ -1558,19 +2152,39 @@ export default function Studio() {
     addChatMessage("user", text);
     const durationMatch = text.match(/(\d+)\s*秒/);
     const duration = durationMatch ? parseInt(durationMatch[1]) : 60;
-    const refInfo = referenceImages.length > 0 ? `\n**角色参考图**：${referenceImages.length} 张` : "";
-    addChatMessage("assistant", `好的！\n\n**主题**：${text}\n**目标时长**：${duration}s\n**视频引擎**：${engine === "auto" ? "智能路由" : engine.toUpperCase()}\n**Multi-Shot**：${multiShot ? "开启" : "关闭"}${refInfo}\n\n正在生成分镜脚本...`);
+    const refInfo =
+      referenceImages.length > 0
+        ? `\n**角色参考图**：${referenceImages.length} 张`
+        : "";
+    addChatMessage(
+      "assistant",
+      `好的！\n\n**主题**：${text}\n**目标时长**：${duration}s\n**视频引擎**：${engine === "auto" ? "智能路由" : engine.toUpperCase()}\n**Multi-Shot**：${multiShot ? "开启" : "关闭"}${refInfo}\n\n正在生成分镜脚本...`
+    );
 
-    const wfParams = { topic: text, duration, engine, addSubtitles: true, referenceImages: referenceImages.map(r => r.path), style: undefined, resolution: resolution as "720p" | "1080p" | "4K" };
+    const wfParams = {
+      topic: text,
+      duration,
+      engine,
+      addSubtitles: true,
+      referenceImages: referenceImages.map(r => r.path),
+      style: undefined,
+      resolution: resolution as "720p" | "1080p" | "4K",
+    };
     setLastWorkflowParams(wfParams);
     try {
       await startWorkflow(wfParams);
     } catch (err) {
-      addChatMessage("assistant", `❌ 工作流启动失败：${err instanceof Error ? err.message : "启动失败"}\n\n请确认后端服务已启动。`);
+      addChatMessage(
+        "assistant",
+        `❌ 工作流启动失败：${err instanceof Error ? err.message : "启动失败"}\n\n请确认后端服务已启动。`
+      );
     }
   };
 
-  const handleCreateProjectFromAnalysis = async (_analysisId: string, result: ReferenceVideoAnalysisResult) => {
+  const handleCreateProjectFromAnalysis = async (
+    _analysisId: string,
+    result: ReferenceVideoAnalysisResult
+  ) => {
     // 保存当前项目对话再重置
     if (workflow.projectId && messages.length > 0) {
       saveMsgsToStorage(workflow.projectId, messages);
@@ -1579,7 +2193,10 @@ export default function Studio() {
     setCurrentProjectId(null);
     setMessages([]);
     const replacedChars = result.characters.filter(c => c.replacement_image);
-    addChatMessage("assistant", `对标视频分析完成！直接使用分析分镜创建项目（跳过 LLM 重新生成）...\n\n**标题**：${result.title}\n**分镜数**：${result.scenes.length} 个（直接使用对标分析结果）\n**人物替换**：${replacedChars.length > 0 ? replacedChars.map(c => c.name).join("、") : "无"}\n\n即将进入分镜审核...`);
+    addChatMessage(
+      "assistant",
+      `对标视频分析完成！直接使用分析分镜创建项目（跳过 LLM 重新生成）...\n\n**标题**：${result.title}\n**分镜数**：${result.scenes.length} 个（直接使用对标分析结果）\n**人物替换**：${replacedChars.length > 0 ? replacedChars.map(c => c.name).join("、") : "无"}\n\n即将进入分镜审核...`
+    );
     try {
       // 把对标分析的分镜直接作为 preset_scenes 传入，后端会跳过 LLM 生成
       await startWorkflow({
@@ -1587,25 +2204,42 @@ export default function Studio() {
         duration: Math.round(result.total_duration) || 60,
         engine: "kling",
         addSubtitles: true,
-        referenceImages: replacedChars.filter(c => c.replacement_image).map(c => c.replacement_image as string),
+        referenceImages: replacedChars
+          .filter(c => c.replacement_image)
+          .map(c => c.replacement_image as string),
         style: result.overall_prompt || result.style || undefined,
-        presetScenes: result.scenes as unknown as Array<Record<string, unknown>>,
+        presetScenes: result.scenes as unknown as Array<
+          Record<string, unknown>
+        >,
       });
     } catch (err) {
-      addChatMessage("assistant", `❌ 工作流启动失败：${err instanceof Error ? err.message : "启动失败"}`);
+      addChatMessage(
+        "assistant",
+        `❌ 工作流启动失败：${err instanceof Error ? err.message : "启动失败"}`
+      );
     }
   };
 
-  const isGenerating = workflow.stage !== "idle" && workflow.stage !== "awaiting_review" && workflow.stage !== "completed" && workflow.stage !== "failed";
+  const isGenerating =
+    workflow.stage !== "idle" &&
+    workflow.stage !== "awaiting_review" &&
+    workflow.stage !== "completed" &&
+    workflow.stage !== "failed";
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* 好莱坞感背景 */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-[oklch(0.55_0.22_270)/0.08] to-[oklch(0.60_0.20_190)/0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-[oklch(0.60_0.20_190)/0.06] to-[oklch(0.55_0.22_270)/0.02] rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
+      </div>
+
       {/* 左侧导航 */}
       <SidebarNav
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         projects={projects}
-        onSelectProject={(id) => {
+        onSelectProject={id => {
           // 先保存当前项目对话（如果有）
           if (workflow.projectId && messages.length > 0) {
             saveMsgsToStorage(workflow.projectId, messages);
@@ -1622,23 +2256,130 @@ export default function Studio() {
       {/* 中间主区 */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 顶部标题栏 */}
-        <div className="px-6 py-3 border-b border-border bg-card flex items-center justify-between shrink-0">
+        <div className="px-6 py-3 border-b border-border/50 bg-background/80 backdrop-blur-md flex items-center justify-between shrink-0">
           <div>
-            <h2 style={{ fontFamily: "'Playfair Display', serif" }} className="text-lg font-semibold text-foreground">创作工作台</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">输入创意，AI 全自动完成脚本·配音·视频·成片</p>
+            <h2
+              className="text-lg font-semibold bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] bg-clip-text text-transparent"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              创作工作台
+            </h2>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">
+              输入创意，AI 全自动完成脚本·配音·视频·成片
+            </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              {backendOnline ? <Wifi size={13} className="text-emerald-500" /> : <WifiOff size={13} className="text-muted-foreground" />}
-              <span className="text-xs text-muted-foreground">{backendOnline ? "后端已连接" : "后端未连接"}</span>
+            {/* 语言选择器 */}
+            <div className="relative" ref={langRef}>
+              <button
+                onClick={() => setLangOpen(!langOpen)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                title={t("language")}
+              >
+                <Globe size={16} />
+              </button>
+              {langOpen && (
+                <div className="absolute right-0 top-full mt-1 py-1 w-36 rounded-xl bg-card border border-border/50 shadow-lg z-50">
+                  {languages.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        i18n.changeLanguage(lang.code);
+                        setLangOpen(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-secondary/50 transition-colors ${
+                        i18n.language === lang.code
+                          ? "text-[oklch(0.55_0.22_270)] font-medium"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {t(lang.key as any)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* 主题选择器 */}
+            <div className="relative" ref={themeRef}>
+              <button
+                onClick={() => setThemeOpen(!themeOpen)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                title={t("theme")}
+              >
+                {theme === "light" ? (
+                  <Sun size={16} />
+                ) : theme === "dark" ? (
+                  <Moon size={16} />
+                ) : (
+                  <Monitor size={16} />
+                )}
+              </button>
+              {themeOpen && (
+                <div className="absolute right-0 top-full mt-1 py-1 w-32 rounded-xl bg-card border border-border/50 shadow-lg z-50">
+                  {themes.map(th => (
+                    <button
+                      key={th.value}
+                      onClick={() => {
+                        setTheme(th.value as "light" | "dark" | "system");
+                        setThemeOpen(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-secondary/50 transition-colors ${
+                        theme === th.value
+                          ? "text-[oklch(0.55_0.22_270)] font-medium"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      <th.icon size={14} />
+                      {t(th.key as any)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 设置按钮 - 打开API设置对话框 */}
+            <button
+              onClick={() => setOpenDialog("settings")}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+              title={t("settings")}
+            >
+              <Settings size={16} />
+            </button>
+
+            {/* 后端状态指示器 */}
+            <div
+              className="flex items-center gap-1.5 cursor-help"
+              title={backendOnline ? "后端已连接" : "后端未连接"}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${backendOnline ? "bg-[oklch(0.60_0.20_190)]" : "bg-muted-foreground/50"}`}
+              />
+            </div>
+
+            {/* 工作流审核按钮 - 仅在需要审核时显示 */}
             {workflow.stage === "awaiting_review" && (
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => { submitReview(false); addChatMessage("assistant", "已取消。"); }} className="gap-1.5 text-xs">
-                  <X size={12} />取消
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    submitReview(false);
+                    addChatMessage("assistant", "已取消。");
+                  }}
+                  className="gap-1.5 text-xs"
+                >
+                  <X size={12} />
+                  取消
                 </Button>
-                <Button size="sm" onClick={() => submitReview(true)} className="gap-1.5 text-xs" style={{ background: "var(--primary)" }}>
-                  <CheckCircle2 size={12} />确认脚本，开始生成
+                <Button
+                  size="sm"
+                  onClick={() => submitReview(true)}
+                  className="gap-1.5 text-xs"
+                  style={{ background: "var(--primary)" }}
+                >
+                  <CheckCircle2 size={12} />
+                  确认脚本，开始生成
                 </Button>
               </div>
             )}
@@ -1649,7 +2390,9 @@ export default function Studio() {
         <CharacterRail
           referenceImages={referenceImages}
           onAdd={handleUploadReference}
-          onRemove={(idx) => setReferenceImages(prev => prev.filter((_, i) => i !== idx))}
+          onRemove={idx =>
+            setReferenceImages(prev => prev.filter((_, i) => i !== idx))
+          }
           isUploading={isUploading}
         />
 
@@ -1657,43 +2400,84 @@ export default function Studio() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-full py-12 px-6">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ background: "var(--accent-muted)" }}>
-                <Sparkles size={28} style={{ color: "var(--accent-muted-foreground)" }} />
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-[oklch(0.55_0.22_270)/0.15] to-[oklch(0.60_0.20_190)/0.1] border border-[oklch(0.55_0.22_270)/0.2]">
+                <Sparkles size={28} className="text-[oklch(0.60_0.20_190)]" />
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+              <h3
+                className="text-xl font-semibold bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] bg-clip-text text-transparent mb-2"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
                 开始创作你的视频
               </h3>
-              <p className="text-sm text-muted-foreground text-center mb-8 max-w-xs leading-relaxed">
-                在下方输入创意，或点击「对标分析」上传参考视频，AI 自动完成全部工作
+              <p
+                className="text-sm text-muted-foreground/60 text-center mb-8 max-w-xs leading-relaxed"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                在下方输入创意，或点击「对标分析」上传参考视频，AI
+                自动完成全部工作
               </p>
               <div className="grid grid-cols-3 gap-3 w-full max-w-lg">
                 {[
-                  { icon: Sparkles, title: "一句话生成", desc: "输入主题，自动生成脚本·配音·视频" },
-                  { icon: ScanSearch, title: "对标视频分析", desc: "上传参考视频，反推提示词+人物替换" },
-                  { icon: Layers, title: "Multi-Shot 模式", desc: "Kling Omni 多分镜连贯生成" },
+                  {
+                    icon: Sparkles,
+                    title: "一句话生成",
+                    desc: "输入主题，自动生成脚本·配音·视频",
+                  },
+                  {
+                    icon: ScanSearch,
+                    title: "对标视频分析",
+                    desc: "上传参考视频，反推提示词+人物替换",
+                  },
+                  {
+                    icon: Layers,
+                    title: "Multi-Shot 模式",
+                    desc: "Kling Omni 多分镜连贯生成",
+                  },
                 ].map(f => (
-                  <div key={f.title} className="p-4 rounded-xl border border-border bg-card text-center hover:shadow-sm transition-shadow">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "var(--accent-muted)" }}>
-                      <f.icon size={18} style={{ color: "var(--accent-muted-foreground)" }} />
+                  <div
+                    key={f.title}
+                    className="p-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm text-center hover:shadow-sm transition-shadow"
+                    style={{ fontFamily: "'Playfair Display', serif" }}
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-3 bg-gradient-to-br from-[oklch(0.55_0.22_270)/0.15] to-[oklch(0.60_0.20_190)/0.1] border border-[oklch(0.55_0.22_270)/0.2]">
+                      <f.icon
+                        size={18}
+                        className="text-[oklch(0.60_0.20_190)]"
+                      />
                     </div>
-                    <div className="text-xs font-semibold text-foreground mb-1">{f.title}</div>
-                    <div className="text-xs text-muted-foreground leading-relaxed">{f.desc}</div>
+                    <div className="text-xs font-semibold text-foreground mb-1">
+                      {f.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground/60 leading-relaxed">
+                      {f.desc}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${msg.role === "user" ? "bg-primary" : "bg-secondary"}`}>
-                    {msg.role === "user" ? <User size={14} className="text-primary-foreground" /> : <Bot size={14} className="text-foreground" />}
+              {messages.map(msg => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === "user" ? "bg-gradient-to-br from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)]" : "bg-secondary/80 border border-border/50"}`}
+                  >
+                    {msg.role === "user" ? (
+                      <User size={14} className="text-white" />
+                    ) : (
+                      <Bot size={14} className="text-foreground" />
+                    )}
                   </div>
                   <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      msg.role === "user" ? "bg-primary text-primary-foreground rounded-tr-sm" : "bg-card text-foreground rounded-tl-sm border border-border"
+                    className={`px-4 py-3 rounded-2xl max-w-[75%] text-sm leading-relaxed whitespace-pre-wrap ${
+                      msg.role === "user"
+                        ? "bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] text-white rounded-tr-sm"
+                        : "bg-card/80 backdrop-blur-sm text-foreground rounded-tl-sm border border-border/50"
                     }`}
-                    style={{ whiteSpace: "pre-wrap" }}
+                    style={{ fontFamily: "'Playfair Display', serif" }}
                   >
                     {msg.content}
                   </div>
@@ -1710,29 +2494,42 @@ export default function Studio() {
             scenes={workflow.scenes}
             onUpdate={updateScene}
             onApprove={() => submitReview(true)}
-            onCancel={() => { submitReview(false); addChatMessage("assistant", "已取消。"); }}
+            onCancel={() => {
+              submitReview(false);
+              addChatMessage("assistant", "已取消。");
+            }}
           />
         )}
 
         {/* 输入区 */}
-        <div className="px-6 py-4 border-t border-border bg-card shrink-0">
-          <div className="flex items-end gap-3">
+        <div className="px-6 py-4 border-t border-border/50 bg-background/80 backdrop-blur-md shrink-0">
+          <div className="flex items-end gap-3 max-w-4xl mx-auto">
             <Textarea
+              ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={isGenerating ? "视频生成中，请稍候..." : "描述你想要的视频内容，例如：一个科技产品发布会，蓝紫色调，30秒"}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="描述你的视频创意..."
               disabled={isGenerating}
-              className="flex-1 min-h-[56px] max-h-[120px] resize-none text-sm"
+              className="flex-1 min-h-[56px] max-h-[120px] resize-none text-sm rounded-xl border-border/50 bg-secondary/50 focus:bg-secondary"
+              style={{ fontFamily: "'Playfair Display', serif" }}
               rows={2}
             />
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isGenerating}
-              className="h-14 w-14 shrink-0 rounded-xl"
-              style={{ background: "var(--primary)" }}
+              className="h-14 w-14 shrink-0 rounded-xl bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] hover:opacity-90"
             >
-              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              {isGenerating ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Send size={18} />
+              )}
             </Button>
           </div>
         </div>
@@ -1745,7 +2542,8 @@ export default function Studio() {
           onMultiShotChange={setMultiShot}
           resolution={resolution}
           onResolutionChange={setResolution}
-          onAnalyzeVideo={() => setAnalysisPanelOpen(true)}
+          analysisPanelOpen={analysisPanelOpen}
+          setAnalysisPanelOpen={setAnalysisPanelOpen}
           isGenerating={isGenerating}
           isConnected={backendOnline}
           stage={workflow.stage}
@@ -1768,33 +2566,59 @@ export default function Studio() {
         projectId={workflow.projectId}
         onDownload={async () => {
           if (!workflow.projectId) return;
-          window.open(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/projects/${workflow.projectId}/download/video`, "_blank");
+          window.open(
+            `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/projects/${workflow.projectId}/download/video`,
+            "_blank"
+          );
         }}
         onExportDraft={async () => {
           if (!workflow.projectId) return;
-          window.open(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/projects/${workflow.projectId}/download/draft`, "_blank");
+          window.open(
+            `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/projects/${workflow.projectId}/download/draft`,
+            "_blank"
+          );
         }}
         onFeedback={submitFeedback}
-        onRetry={lastWorkflowParams ? async () => {
-          reset();
-          addChatMessage("assistant", `重试中...重新发起上次的工作流。`);
-          try {
-            await startWorkflow(lastWorkflowParams);
-          } catch (err) {
-            addChatMessage("assistant", `❌ 重试失败：${err instanceof Error ? err.message : "未知错误"}`);
-          }
-        } : undefined}
-        onResume={workflow.projectId && workflow.stage === "failed" ? async () => {
-          addChatMessage("assistant", `断点续传中，复用已有图片和配音直接生成视频...`);
-          try {
-            await resumeProject(workflow.projectId!, engine);
-          } catch (err) {
-            addChatMessage("assistant", `❌ 断点续传失败：${err instanceof Error ? err.message : "未知错误"}`);
-          }
-        } : undefined}
+        onRetry={
+          lastWorkflowParams
+            ? async () => {
+                reset();
+                addChatMessage("assistant", `重试中...重新发起上次的工作流。`);
+                try {
+                  await startWorkflow(lastWorkflowParams);
+                } catch (err) {
+                  addChatMessage(
+                    "assistant",
+                    `❌ 重试失败：${err instanceof Error ? err.message : "未知错误"}`
+                  );
+                }
+              }
+            : undefined
+        }
+        onResume={
+          workflow.projectId && workflow.stage === "failed"
+            ? async () => {
+                addChatMessage(
+                  "assistant",
+                  `断点续传中，复用已有图片和配音直接生成视频...`
+                );
+                try {
+                  await resumeProject(workflow.projectId!, engine);
+                } catch (err) {
+                  addChatMessage(
+                    "assistant",
+                    `❌ 断点续传失败：${err instanceof Error ? err.message : "未知错误"}`
+                  );
+                }
+              }
+            : undefined
+        }
       />
       {/* 只有管理员才能看到调试面板（单用户模式也显示） */}
       {(isAdmin || !authEnabled) && <DebugPanel />}
+
+      {/* 设置对话框 */}
+      <StudioDialogs open={openDialog} onClose={() => setOpenDialog(null)} />
     </div>
   );
 }

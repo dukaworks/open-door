@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Zap, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 // OAuth 图标组件
 const OAuthIcon = ({ provider }: { provider: string }) => {
@@ -175,12 +175,12 @@ export default function Login() {
         <div className="card-modern p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[oklch(0.55_0.22_270)] to-[oklch(0.65_0.20_290)] shadow-lg mb-4">
-              <Zap size={28} className="text-white" />
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 overflow-hidden">
+              <img src="/images/logo.png" alt="Logo" className="w-12 h-12 object-contain" />
             </div>
             <h1 
               style={{ fontFamily: "'Playfair Display', serif" }} 
-              className="text-2xl font-bold text-foreground"
+              className="text-2xl font-bold bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] bg-clip-text text-transparent"
             >
               芝麻开门
             </h1>
@@ -189,16 +189,16 @@ export default function Login() {
 
           {/* 邮箱登录/注册表单 */}
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary/50">
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-secondary/50 h-auto">
               <TabsTrigger 
                 value="login" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[oklch(0.55_0.22_270)] data-[state=active]:to-[oklch(0.65_0.20_290)] data-[state=active]:text-white"
+                className="py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[oklch(0.55_0.22_270)] data-[state=active]:to-[oklch(0.65_0.20_290)] data-[state=active]:text-white"
               >
                 登录
               </TabsTrigger>
               <TabsTrigger 
                 value="register"
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[oklch(0.55_0.22_270)] data-[state=active]:to-[oklch(0.65_0.20_290)] data-[state=active]:text-white"
+                className="py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[oklch(0.55_0.22_270)] data-[state=active]:to-[oklch(0.65_0.20_290)] data-[state=active]:text-white"
               >
                 注册
               </TabsTrigger>

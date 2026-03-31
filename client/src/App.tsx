@@ -13,7 +13,6 @@ import Studio from "./pages/Studio";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-import Preferences from "./pages/Preferences";
 
 function Router() {
   return (
@@ -32,20 +31,20 @@ function Router() {
       <Route path="/profile">
         <ProtectedRouteComponent component={Profile} path="/profile" />
       </Route>
-      <Route path="/preferences">
+      {/* <Route path="/preferences">
         <ProtectedRouteComponent component={Preferences} path="/preferences" />
       </Route>
-      <Route path="/404" component={NotFound} />
+      <Route path="/404" component={NotFound} /> */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function ProtectedRouteComponent({ 
-  component: Component, 
-  path 
-}: { 
-  component: React.ComponentType<{ params?: Record<string, string> }>; 
+function ProtectedRouteComponent({
+  component: Component,
+  path,
+}: {
+  component: React.ComponentType<{ params?: Record<string, string> }>;
   path: string;
 }) {
   const { isAuthenticated, isLoading, authEnabled } = useAuth();
@@ -77,7 +76,9 @@ function AppContent() {
 }
 
 function App() {
-  const [initialTheme, setInitialTheme] = useState<"light" | "dark" | "system">("dark");
+  const [initialTheme, setInitialTheme] = useState<"light" | "dark" | "system">(
+    "dark"
+  );
   const [themeLoaded, setThemeLoaded] = useState(false);
 
   // 从后端加载用户偏好设置
