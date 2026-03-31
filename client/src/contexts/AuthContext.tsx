@@ -6,6 +6,7 @@ interface User {
   email: string;
   created_at?: string;
   is_admin?: boolean;
+  avatar_url?: string;
 }
 
 interface AuthContextType {

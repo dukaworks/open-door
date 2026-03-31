@@ -37,7 +37,7 @@ interface Package {
   name: string;
   icon: string;
   description: string;
-  services: { type: string; provider: string }[];
+  services?: { type: string; provider: string }[];
 }
 
 interface UserConfig {
@@ -78,10 +78,126 @@ const SERVICE_ICONS: Record<string, string> = {
 };
 
 // 预设套餐
-const DEFAULT_PACKAGES = [
-  { id: "basic", name: "基础版", icon: "🌟", description: "免费体验推荐" },
-  { id: "pro", name: "专业版", icon: "🚀", description: "全功能解锁" },
-  { id: "flagship", name: "旗舰版", icon: "👑", description: "无限可能" },
+const DEFAULT_PACKAGES: Package[] = [
+  {
+    id: "basic",
+    name: "基础版",
+    icon: "🌟",
+    description: "免费体验推荐",
+    services: [
+      { type: "llm", provider: "deepseek" },
+      { type: "image", provider: "nano_banana" },
+      { type: "video", provider: "kling" },
+      { type: "tts", provider: "minimax" },
+    ],
+  },
+  {
+    id: "pro",
+    name: "专业版",
+    icon: "🚀",
+    description: "全功能解锁",
+    services: [
+      { type: "llm", provider: "kimi" },
+      { type: "llm", provider: "minimax" },
+      { type: "image", provider: "nano_banana" },
+      { type: "video", provider: "kling" },
+      { type: "video", provider: "seedance" },
+      { type: "memory", provider: "local" },
+    ],
+  },
+  {
+    id: "flagship",
+    name: "旗舰版",
+    icon: "👑",
+    description: "无限可能",
+    services: [
+      { type: "llm", provider: "deepseek" },
+      { type: "llm", provider: "kimi" },
+      { type: "llm", provider: "minimax" },
+      { type: "llm", provider: "gemini" },
+      { type: "image", provider: "nano_banana" },
+      { type: "video", provider: "kling" },
+      { type: "video", provider: "seedance" },
+      { type: "tts", provider: "minimax" },
+      { type: "memory", provider: "mem0" },
+    ],
+  },
+];
+
+// 默认提供商数据（API 失败时使用）
+const getDefaultProviders = (): Provider[] => [
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    type: "llm",
+    description: "性价比最高，适合脚本生成",
+    requires_secret: false,
+    default_url: "https://api.deepseek.com/v1",
+  },
+  {
+    id: "kimi",
+    name: "Kimi (Moonshot)",
+    type: "llm",
+    description: "适合长文本处理",
+    requires_secret: false,
+    default_url: "https://api.moonshot.cn/v1",
+  },
+  {
+    id: "minimax",
+    name: "MiniMax",
+    type: "llm",
+    description: "对话与情绪表达最强",
+    requires_secret: false,
+    default_url: "https://api.minimax.chat/v1",
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini",
+    type: "llm",
+    description: "多模态理解",
+    requires_secret: false,
+    default_url: "https://generativelanguage.googleapis.com/v1",
+  },
+  {
+    id: "nano_banana",
+    name: "Nano Banana (Gemini Image)",
+    type: "image",
+    description: "4K 首帧锁定",
+    requires_secret: false,
+    default_url: "",
+  },
+  {
+    id: "kling",
+    name: "Kling 3.0",
+    type: "video",
+    description: "动作/产品/抖音短视频首选",
+    requires_secret: true,
+    default_url: "https://api-beijing.klingai.com",
+  },
+  {
+    id: "seedance",
+    name: "Seedance 1.5 (字节)",
+    type: "video",
+    description: "叙事短剧/多角色连戏首选",
+    requires_secret: false,
+    default_url: "https://ark.cn-beijing.volces.com/api/v3",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter (API聚合)",
+    type: "llm",
+    description: "支持 100+ 模型",
+    requires_secret: false,
+    default_url: "https://openrouter.ai/api/v1",
+  },
+  {
+    id: "ollama",
+    name: "Ollama (本地模型)",
+    type: "llm",
+    description: "本地部署，无需网络",
+    requires_secret: false,
+    default_url: "http://localhost:11434/v1",
+  },
 ];
 
 export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
@@ -119,6 +235,11 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   }, [open]);
 
+  // 组件挂载时也尝试加载（防止 open 初始为 true 时错过加载）
+  useEffect(() => {
+    loadData();
+  }, []);
+
   // 加载提供商和模型
   useEffect(() => {
     if (selectedProvider) {
@@ -128,23 +249,67 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   const loadData = async () => {
     setLoading(true);
+    // 获取当前页面地址，确保请求正确
+    const baseUrl = window.location.origin;
+
     try {
-      const [providersRes, packagesRes, configsRes] = await Promise.all([
-        fetch("/api/providers"),
-        fetch("/api/packages"),
-        fetch("/api/user/config"),
+      console.log("[SettingsDialog] 开始加载数据..., baseUrl:", baseUrl);
+
+      // 并行加载所有数据，避免一个失败影响其他
+      const [providersData, packagesData, configsData] = await Promise.allSettled([
+        fetch(`${baseUrl}/api/providers`).then(async res => {
+          if (!res.ok) throw new Error(`providers: ${res.status}`);
+          return res.json();
+        }),
+        fetch(`${baseUrl}/api/packages`).then(async res => {
+          if (!res.ok) throw new Error(`packages: ${res.status}`);
+          return res.json();
+        }),
+        fetch(`${baseUrl}/api/user/config`).then(async res => {
+          if (!res.ok) throw new Error(`configs: ${res.status}`);
+          return res.json();
+        }),
       ]);
 
-      const providersData = await providersRes.json();
-      const packagesData = await packagesRes.json();
-      const configsData = await configsRes.json();
+      // 处理 providers
+      if (providersData.status === "fulfilled") {
+        console.log("[SettingsDialog] providers loaded:", providersData.value.length);
+        setProviders(providersData.value);
+      } else {
+        console.error("[SettingsDialog] providers failed:", providersData.reason);
+        // 使用默认提供商数据
+        setProviders(getDefaultProviders());
+      }
 
-      setProviders(providersData);
-      setPackages(packagesData);
-      setUserConfigs(configsData);
+      // 处理 packages
+      if (packagesData.status === "fulfilled") {
+        console.log("[SettingsDialog] packages loaded:", packagesData.value.length);
+        setPackages(packagesData.value);
+      } else {
+        console.error("[SettingsDialog] packages failed:", packagesData.reason);
+        // 使用默认套餐数据
+        setPackages(DEFAULT_PACKAGES);
+      }
+
+      // 处理 configs
+      if (configsData.status === "fulfilled") {
+        console.log("[SettingsDialog] configs loaded:", configsData.value.length);
+        setUserConfigs(configsData.value);
+      } else {
+        console.error("[SettingsDialog] configs failed:", configsData.reason);
+        setUserConfigs([]);
+      }
+
+      // 如果全部失败，显示错误提示
+      if (providersData.status === "rejected" && packagesData.status === "rejected") {
+        toast.error("数据加载失败，请检查后端服务是否运行");
+      }
     } catch (error) {
-      console.error("加载数据失败:", error);
-      toast.error("加载数据失败");
+      console.error("[SettingsDialog] 加载数据失败:", error);
+      toast.error("加载数据失败: " + (error as Error).message);
+      // 使用默认数据兜底
+      setProviders(getDefaultProviders());
+      setPackages(DEFAULT_PACKAGES);
     } finally {
       setLoading(false);
     }
@@ -152,9 +317,23 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   const loadModels = async (provider: string) => {
     setLoadingModels(true);
+    const baseUrl = window.location.origin;
+    console.log("开始加载模型 for:", provider, "baseUrl:", baseUrl);
     try {
-      const response = await fetch(`/api/providers/${provider}/models`);
+      const response = await fetch(
+        `${baseUrl}/api/providers/${provider}/models`
+      );
+      console.log("models response status:", response.status);
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("models error:", text);
+        setModels([]);
+        return;
+      }
+
       const data = await response.json();
+      console.log("models data:", data);
       setModels(data.models || []);
     } catch (error) {
       console.error("加载模型失败:", error);
@@ -278,49 +457,78 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
         <ScrollArea className="flex-1 p-4">
           {loading ? (
-            <div className="flex items-center justify-center h-40">
+            <div className="flex flex-col items-center justify-center h-40 gap-2">
               <Loader2 className="animate-spin" />
+              <span className="text-sm text-muted-foreground">加载中...</span>
             </div>
           ) : activeTab === "packages" ? (
             /* 套餐选择视图 */
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                选择一个套餐，或自定义配置各服务
-              </p>
-
-              <div className="grid grid-cols-3 gap-4">
-                {packages.map(pkg => (
-                  <Card
-                    key={pkg.id}
-                    className="cursor-pointer hover:border-primary"
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2">
-                        <span>{pkg.icon}</span> {pkg.name}
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        {pkg.description}
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1">
-                        {pkg.services.map((svc, idx) => (
-                          <div
-                            key={idx}
-                            className="text-sm flex items-center gap-2"
-                          >
-                            <span>{SERVICE_ICONS[svc.type]}</span>
-                            <span>{SERVICE_NAMES[svc.type]}</span>
-                            <span className="text-muted-foreground">
-                              - {svc.provider}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  选择一个套餐快速开始，或切换到"提供商配置"自定义设置
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadData}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`mr-2 ${loading ? "animate-spin" : ""}`} size={14} />
+                  刷新
+                </Button>
               </div>
+
+              {packages.length === 0 ? (
+                <div className="text-center py-12 border rounded-lg bg-muted/20">
+                  <p className="text-muted-foreground mb-2">暂无套餐数据</p>
+                  <Button variant="outline" size="sm" onClick={loadData}>
+                    重新加载
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {packages.map(pkg => (
+                    <Card
+                      key={pkg.id}
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => {
+                        toast.info(`已选择「${pkg.name}」套餐，请在右侧配置 API Key`);
+                      }}
+                    >
+                      <CardHeader className="pb-2">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <span className="text-2xl">{pkg.icon}</span>
+                          <span>{pkg.name}</span>
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          {pkg.description}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-1.5">
+                          {pkg.services && pkg.services.length > 0 ? (
+                            pkg.services.map((svc, idx) => (
+                              <div
+                                key={idx}
+                                className="text-sm flex items-center gap-2"
+                              >
+                                <span>{SERVICE_ICONS[svc.type] || "🔧"}</span>
+                                <span>{SERVICE_NAMES[svc.type] || svc.type}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  ({svc.provider})
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground">暂无服务列表</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             /* 提供商配置视图 */

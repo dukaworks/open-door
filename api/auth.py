@@ -14,6 +14,8 @@ import sqlite3
 import json
 import secrets
 import hashlib
+import uuid
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 from dataclasses import dataclass
@@ -394,10 +396,12 @@ def get_user_by_id(user_id: str) -> Optional[User]:
         ).fetchone()
 
     if not row:
+        print(f"[get_user_by_id] 用户不存在: {user_id}")
         return None
 
     is_admin = row[6] == 1 if len(row) > 6 else False
     avatar_url = row[7] if len(row) > 7 else None
+    print(f"[get_user_by_id] user_id={user_id}, avatar_url={avatar_url}")
     return User(
         id=row[0],
         username=row[1],
@@ -434,7 +438,7 @@ def update_user_profile(
 
             # 检查是否被其他用户占用
             existing = conn.execute(
-                f"SELECT id FROM users WHERE ({','.join(query_parts)}) AND id != ?", params
+                f"SELECT id FROM users WHERE ({' OR '.join(query_parts)}) AND id != ?", params
             ).fetchone()
 
             if existing:
@@ -457,8 +461,11 @@ def update_user_profile(
         return get_user_by_id(user_id)
 
     params.append(user_id)
+    print(f"[update_user_profile] updates={updates}, params={params}")
     with sqlite3.connect(db_path) as conn:
-        conn.execute(f"UPDATE users SET {','.join(updates)} WHERE id = ?", params)
+        cursor = conn.execute(f"UPDATE users SET {','.join(updates)} WHERE id = ?", params)
+        conn.commit()
+        print(f"[update_user_profile] rows affected: {cursor.rowcount}")
 
     return get_user_by_id(user_id)
 
@@ -725,7 +732,7 @@ async def get_me(current_user: TokenData = Depends(get_current_user)):
         id=user.id,
         username=user.username,
         email=user.email,
-        avatar_url=None,  # 暂不返回完整 URL
+        avatar_url=user.avatar_url,
         created_at=user.created_at,
         is_admin=user.is_admin,
     )
@@ -762,6 +769,9 @@ async def update_profile(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        print(f"[ERROR] 更新用户资料失败: {str(e)}")
+        print(f"[ERROR] 堆栈: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"更新失败: {str(e)}")
 
     if not user:
@@ -771,7 +781,7 @@ async def update_profile(
         id=user.id,
         username=user.username,
         email=user.email,
-        avatar_url=None,  # 暂不返回完整 URL
+        avatar_url=user.avatar_url,
         created_at=user.created_at,
         is_admin=user.is_admin,
     )
@@ -859,7 +869,15 @@ async def upload_avatar(
 
     # 更新用户头像
     avatar_url = f"/data/avatars/{unique_name}"
-    update_user_profile(current_user.user_id, avatar_url=avatar_url)
+    print(f"[upload_avatar] 准备保存头像: user_id={current_user.user_id}, avatar_url={avatar_url}")
+    try:
+        updated_user = update_user_profile(current_user.user_id, avatar_url=avatar_url)
+        print(f"[upload_avatar] 更新完成: success={updated_user is not None}, avatar_url={updated_user.avatar_url if updated_user else 'None'}")
+    except Exception as e:
+        print(f"[upload_avatar] 更新失败: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
     return {"path": avatar_url, "filename": unique_name, "message": "头像上传成功"}
 

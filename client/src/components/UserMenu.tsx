@@ -16,23 +16,23 @@ import {
   Film,
   UserCircle,
   Palette,
-  Link2,
   X,
 } from "lucide-react";
 import {
   StudioDialogs,
   DialogType,
-  AccountBindingDialog,
 } from "@/components/StudioDialogs";
 
 interface UserMenuProps {
   collapsed?: boolean;
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+
 export function UserMenu({ collapsed = false }: UserMenuProps) {
   const { user, isAuthenticated, authEnabled, logout } = useAuth();
+  console.log("[UserMenu] user:", user);
   const [openDialog, setOpenDialog] = useState<DialogType>(null);
-  const [accountBindingOpen, setAccountBindingOpen] = useState(false);
 
   // 如果认证未启用，不显示用户菜单
   if (!authEnabled) {
@@ -68,8 +68,16 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg mb-0.5 transition-colors cursor-pointer text-muted-foreground hover:bg-secondary hover:text-foreground">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] flex items-center justify-center text-white text-xs font-medium shrink-0">
-              {user.username.charAt(0).toUpperCase()}
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] flex items-center justify-center text-white text-xs font-medium shrink-0 overflow-hidden">
+              {user.avatar_url ? (
+                <img 
+                  src={user.avatar_url.startsWith("http") ? user.avatar_url : `${API_BASE}${user.avatar_url}`}
+                  alt={user.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user.username.charAt(0).toUpperCase()
+              )}
             </div>
             {!collapsed && (
               <span className="text-sm font-medium truncate">
@@ -107,14 +115,6 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
             <Settings size={14} className="mr-2" />
             设置
           </DropdownMenuItem>
-
-          <DropdownMenuItem
-            onClick={() => setAccountBindingOpen(true)}
-            className="cursor-pointer"
-          >
-            <Link2 size={14} className="mr-2" />
-            账号绑定
-          </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border/50" />
           <DropdownMenuItem
             onClick={handleLogout}
@@ -128,12 +128,6 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
 
       {/* 对话框 */}
       <StudioDialogs open={openDialog} onClose={() => setOpenDialog(null)} />
-
-      {/* 账号绑定对话框 */}
-      <AccountBindingDialog
-        open={accountBindingOpen}
-        onClose={() => setAccountBindingOpen(false)}
-      />
     </>
   );
 }

@@ -64,7 +64,10 @@ from modules.assembler import assemble_video, AssemblyPlan
 from modules.jianying_draft import generate_jianying_draft
 from modules.memory import get_memory_manager
 from api.auth import router as auth_router, get_current_user, TokenData
-from api import config_db
+import api.config_db as config_db_module
+
+# 确保初始化
+config_db_module.init_config_db()
 
 
 # ============================================================
@@ -1785,36 +1788,36 @@ async def download_draft(project_id: str):
 @app.get("/api/providers")
 async def get_providers():
     """获取所有支持的提供商列表"""
-    return config_db.get_all_providers()
+    return config_db_module.get_all_providers()
 
 
 @app.get("/api/providers/{provider}/models")
 async def get_provider_models(provider: str, refresh: bool = False):
     """获取提供商模型列表（自动获取+缓存）"""
     if refresh:
-        models = config_db.refresh_provider_models(provider)
+        models = config_db_module.refresh_provider_models(provider)
     else:
-        models = config_db.get_provider_models(provider)
+        models = config_db_module.get_provider_models(provider)
     return {"provider": provider, "models": models}
 
 
 @app.post("/api/providers/{provider}/refresh")
 async def refresh_provider_models(provider: str):
     """强制刷新提供商模型列表"""
-    models = config_db.refresh_provider_models(provider)
+    models = config_db_module.refresh_provider_models(provider)
     return {"provider": provider, "models": models, "message": "模型列表已刷新"}
 
 
 @app.get("/api/packages")
 async def get_packages():
     """获取预设套餐列表"""
-    return config_db.get_preset_packages()
+    return config_db_module.get_preset_packages()
 
 
 @app.get("/api/user/config")
 async def get_user_config(user_id: str = "default"):
     """获取用户配置"""
-    return config_db.get_user_configs(user_id)
+    return config_db_module.get_user_configs(user_id)
 
 
 class SaveConfigRequest(BaseModel):
@@ -1834,7 +1837,7 @@ class SaveConfigRequest(BaseModel):
 @app.post("/api/user/config")
 async def save_user_config(request: SaveConfigRequest):
     """保存用户配置"""
-    return config_db.save_user_config(
+    return config_db_module.save_user_config(
         user_id=request.user_id,
         config_type=request.config_type,
         provider=request.provider,
@@ -1850,7 +1853,7 @@ async def save_user_config(request: SaveConfigRequest):
 @app.delete("/api/user/config/{config_id}")
 async def delete_user_config(config_id: int, user_id: str = "default"):
     """删除用户配置"""
-    return config_db.delete_user_config(user_id, config_id)
+    return config_db_module.delete_user_config(user_id, config_id)
 
 
 class TestConfigRequest(BaseModel):
@@ -1869,7 +1872,9 @@ async def test_user_config(request: TestConfigRequest):
     """测试配置有效性"""
     # 使用用户提供的配置或从数据库获取
     api_key = request.api_key
-    base_url = request.base_url or config_db.DEFAULT_BASE_URLS.get(request.provider)
+    base_url = request.base_url or config_db_module.DEFAULT_BASE_URLS.get(
+        request.provider
+    )
     model = request.model
 
     if not api_key:
