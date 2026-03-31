@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import Settings from "@/pages/Settings";
 import Profile from "@/pages/Profile";
+import { SettingsDialog } from "./SettingsDialog";
 
 export type DialogType = "settings" | "profile" | null;
 
@@ -22,15 +22,8 @@ interface StudioDialogsProps {
 export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
   return (
     <>
-      {/* 设置对话框 */}
-      <Dialog
-        open={open === "settings"}
-        onOpenChange={isOpen => !isOpen && onClose()}
-      >
-        <DialogContent className="max-w-4xl h-[85vh] bg-card">
-          <Settings embedded={true} onSaved={onClose} />
-        </DialogContent>
-      </Dialog>
+      {/* 设置对话框 - 使用新的独立组件 */}
+      <SettingsDialog open={open === "settings"} onClose={onClose} />
 
       {/* 用户中心对话框 */}
       <Dialog
@@ -45,7 +38,7 @@ export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
   );
 }
 
-// 账号绑定对话框（复用设置页面）
+// 账号绑定对话框
 export function AccountBindingDialog({
   open,
   onClose,
