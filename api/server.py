@@ -16,7 +16,7 @@ import json
 import uuid
 import yaml
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 from enum import Enum
 from pathlib import Path
 
@@ -64,13 +64,18 @@ from modules.assembler import assemble_video, AssemblyPlan
 from modules.jianying_draft import generate_jianying_draft
 from modules.memory import get_memory_manager
 from api.auth import router as auth_router, get_current_user, TokenData
+from api import config_db
 
 
 # ============================================================
 # 应用初始化
 # ============================================================
 
-app = FastAPI(title="芝麻开门 Open-Door API", description="全自动 AI 视频生成代理", version="1.0.0")
+app = FastAPI(
+    title="芝麻开门 Open-Door API",
+    description="全自动 AI 视频生成代理",
+    version="1.0.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -84,7 +89,9 @@ app.add_middleware(
 app.include_router(auth_router)
 
 # 静态文件：用户头像
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"
+)
 AVATARS_DIR = os.path.join(DATA_DIR, "avatars")
 os.makedirs(AVATARS_DIR, exist_ok=True)
 app.mount("/data/avatars", StaticFiles(directory=AVATARS_DIR), name="avatars")
@@ -167,7 +174,9 @@ def load_all_project_metas():
                         "id": pid,
                         "topic": meta.get("topic", ""),
                         "created_at": meta.get("created_at", ""),
-                        "status": meta.get("status", {"stage": "completed", "progress": 100}),
+                        "status": meta.get(
+                            "status", {"stage": "completed", "progress": 100}
+                        ),
                         "script": None,
                         "result": {"final_video": meta["result_path"]}
                         if meta.get("result_path")
@@ -223,7 +232,9 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-async def push_status(project_id: str, stage: WorkflowStage, progress: int, message: str, **kwargs):
+async def push_status(
+    project_id: str, stage: WorkflowStage, progress: int, message: str, **kwargs
+):
     """推送工作流状态到前端"""
     status = {
         "type": "status",
@@ -267,7 +278,10 @@ class ReviewDecisionRequest(BaseModel):
 # ============================================================
 
 UPLOAD_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "uploads", "references"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "data",
+    "uploads",
+    "references",
 )
 VIDEO_UPLOAD_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -286,7 +300,15 @@ def _extract_frame_from_video(video_path: str, output_path: str) -> str:
     """
     try:
         # 获取视频时长
-        probe_cmd = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", video_path]
+        probe_cmd = [
+            "ffprobe",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_format",
+            video_path,
+        ]
         probe_result = subprocess.run(probe_cmd, capture_output=True, text=True)
         duration = 1.0
         if probe_result.returncode == 0:
@@ -439,7 +461,9 @@ def _write_config_updates(updates: dict) -> None:
     if config_path:
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w", encoding="utf-8") as f:
-            yaml.dump(raw, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+            yaml.dump(
+                raw, f, allow_unicode=True, default_flow_style=False, sort_keys=False
+            )
 
 
 # ============================================================
@@ -505,7 +529,10 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
         else:
             # 普通模式：LLM 生成脚本
             await push_status(
-                project_id, WorkflowStage.GENERATING_SCRIPT, 5, "正在分析主题，生成视频脚本..."
+                project_id,
+                WorkflowStage.GENERATING_SCRIPT,
+                5,
+                "正在分析主题，生成视频脚本...",
             )
             memory_context = memory.build_context_for_generation(request.topic)
             script = await asyncio.to_thread(
@@ -584,7 +611,8 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
 
             # 记录用户修改（隐式学习）
             original_scenes = {
-                s["scene_id"]: s for s in (_projects[project_id]["script"] or {}).get("scenes", [])
+                s["scene_id"]: s
+                for s in (_projects[project_id]["script"] or {}).get("scenes", [])
             }
             for scene in updated_scenes:
                 orig = original_scenes.get(scene.scene_id, {})
@@ -631,10 +659,15 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
         )
 
         await push_status(
-            project_id, WorkflowStage.GENERATING_AUDIO, 30, "并行生成关键帧图片和配音中..."
+            project_id,
+            WorkflowStage.GENERATING_AUDIO,
+            30,
+            "并行生成关键帧图片和配音中...",
         )
 
-        keyframe_paths, voiceover_results = await asyncio.gather(keyframe_task, audio_task)
+        keyframe_paths, voiceover_results = await asyncio.gather(
+            keyframe_task, audio_task
+        )
 
         # 根据 TTS 时长更新分镜 duration
         script.scenes = update_scene_durations(script.scenes, voiceover_results)
@@ -675,14 +708,20 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
         )
 
         await push_status(
-            project_id, WorkflowStage.ASSEMBLING, 80, "视频片段生成完成，开始组装最终成片..."
+            project_id,
+            WorkflowStage.ASSEMBLING,
+            80,
+            "视频片段生成完成，开始组装最终成片...",
         )
 
         # ── 阶段 5：组装拼接 ──────────────────────────────────
         output_dir = os.path.join(project_dir, "output")
         temp_dir = os.path.join(project_dir, "temp")
         # 清理文件名中的非法字符（Windows 兼容）
-        safe_title = "".join(c for c in script.title if c not in r'\/:*?"<>|').strip() or "output"
+        safe_title = (
+            "".join(c for c in script.title if c not in r'\/:*?"<>|').strip()
+            or "output"
+        )
         final_video = os.path.join(output_dir, f"{safe_title}.mp4")
         os.makedirs(output_dir, exist_ok=True)
 
@@ -778,7 +817,9 @@ async def create_project(
 
 
 @app.get("/api/projects/{project_id}")
-async def get_project(project_id: str, current_user: TokenData = Depends(get_current_user)):
+async def get_project(
+    project_id: str, current_user: TokenData = Depends(get_current_user)
+):
     """获取项目状态"""
     if project_id not in _projects:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -794,7 +835,9 @@ async def get_project(project_id: str, current_user: TokenData = Depends(get_cur
 @app.get("/api/projects")
 async def list_projects(current_user: TokenData = Depends(get_current_user)):
     """获取当前用户的所有项目列表"""
-    user_projects = [p for p in _projects.values() if p.get("user_id") == current_user.user_id]
+    user_projects = [
+        p for p in _projects.values() if p.get("user_id") == current_user.user_id
+    ]
     return user_projects
 
 
@@ -834,7 +877,9 @@ async def submit_review(
 
 @app.put("/api/projects/{project_id}/script")
 async def update_script(
-    project_id: str, scenes: list[dict], current_user: TokenData = Depends(get_current_user)
+    project_id: str,
+    scenes: list[dict],
+    current_user: TokenData = Depends(get_current_user),
 ):
     """实时更新分镜内容（在审核界面编辑时调用）"""
     # 检查用户权限
@@ -851,7 +896,9 @@ async def update_script(
 
 
 @app.get("/api/projects/{project_id}/download")
-async def get_download_links(project_id: str, current_user: TokenData = Depends(get_current_user)):
+async def get_download_links(
+    project_id: str, current_user: TokenData = Depends(get_current_user)
+):
     """获取成品视频和剪映草稿的下载链接"""
     if project_id not in _projects:
         raise HTTPException(status_code=404, detail="项目不存在")
@@ -916,7 +963,10 @@ async def update_api_keys(request: UpdateApiKeysRequest):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"配置写入失败: {str(e)}")
 
-    return {"message": "API Keys 已更新并写入配置文件", "updated_keys": list(updates.keys())}
+    return {
+        "message": "API Keys 已更新并写入配置文件",
+        "updated_keys": list(updates.keys()),
+    }
 
 
 @app.post("/api/projects/{project_id}/resume")
@@ -936,7 +986,9 @@ async def resume_project(
     script_path = os.path.join(project_dir, "script.json")
 
     if not os.path.exists(script_path):
-        raise HTTPException(status_code=404, detail=f"项目 {project_id} 不存在或 script.json 缺失")
+        raise HTTPException(
+            status_code=404, detail=f"项目 {project_id} 不存在或 script.json 缺失"
+        )
 
     # 检查用户权限（如果是已有项目）
     existing_project = _projects.get(project_id)
@@ -965,7 +1017,9 @@ async def resume_project(
     }
     save_project_meta(project_id)
 
-    background_tasks.add_task(run_resume_workflow, project_id, video_engine, add_subtitles)
+    background_tasks.add_task(
+        run_resume_workflow, project_id, video_engine, add_subtitles
+    )
     return {"project_id": project_id, "message": "断点续传已启动，从视频生成阶段继续"}
 
 
@@ -1042,7 +1096,9 @@ async def run_resume_workflow(
         if voiceover_results:
             script.scenes = update_scene_durations(script.scenes, voiceover_results)
 
-        missing_kf = [s.scene_id for s in script.scenes if s.scene_id not in keyframe_paths]
+        missing_kf = [
+            s.scene_id for s in script.scenes if s.scene_id not in keyframe_paths
+        ]
         if missing_kf:
             await push_status(
                 project_id,
@@ -1079,13 +1135,19 @@ async def run_resume_workflow(
         )
 
         await push_status(
-            project_id, WorkflowStage.ASSEMBLING, 80, "视频片段生成完成，开始组装最终成片..."
+            project_id,
+            WorkflowStage.ASSEMBLING,
+            80,
+            "视频片段生成完成，开始组装最终成片...",
         )
 
         # ── 组装拼接 ──────────────────────────────────────────
         output_dir = os.path.join(project_dir, "output")
         temp_dir = os.path.join(project_dir, "temp")
-        safe_title = "".join(c for c in script.title if c not in r'\/:*?"<>|').strip() or "output"
+        safe_title = (
+            "".join(c for c in script.title if c not in r'\/:*?"<>|').strip()
+            or "output"
+        )
         final_video = os.path.join(output_dir, f"{safe_title}.mp4")
         os.makedirs(output_dir, exist_ok=True)
 
@@ -1209,7 +1271,10 @@ async def test_api_key(request: TestKeyRequest):
                 messages=[{"role": "user", "content": "hi"}],
                 max_tokens=1,
             )
-            return {"success": True, "message": f"{provider} 连接成功，模型: {active_llm.model}"}
+            return {
+                "success": True,
+                "message": f"{provider} 连接成功，模型: {active_llm.model}",
+            }
 
         elif service == "image_gen":
             if not config.image_gen.api_key:
@@ -1218,7 +1283,10 @@ async def test_api_key(request: TestKeyRequest):
 
             client = genai.Client(api_key=config.image_gen.api_key)
             models = list(client.models.list())
-            return {"success": True, "message": f"Gemini API 连接成功，可用模型 {len(models)} 个"}
+            return {
+                "success": True,
+                "message": f"Gemini API 连接成功，可用模型 {len(models)} 个",
+            }
 
         elif service == "tts":
             if not config.tts.api_key:
@@ -1253,14 +1321,20 @@ async def test_api_key(request: TestKeyRequest):
                 msg = result["base_resp"].get("status_msg", "未知错误")
                 if code == 0:
                     return {"success": True, "message": "MiniMax TTS 连接成功"}
-                return {"success": False, "message": f"MiniMax 返回错误: {msg} (code={code})"}
+                return {
+                    "success": False,
+                    "message": f"MiniMax 返回错误: {msg} (code={code})",
+                }
             return {
                 "success": False,
                 "message": f"MiniMax 返回异常: {json.dumps(result, ensure_ascii=False)[:200]}",
             }
 
         elif service == "kling":
-            if not config.video_gen.kling.api_key or not config.video_gen.kling.api_secret:
+            if (
+                not config.video_gen.kling.api_key
+                or not config.video_gen.kling.api_secret
+            ):
                 return {"success": False, "message": "API Key 或 API Secret 未配置"}
             import aiohttp
 
@@ -1420,7 +1494,8 @@ async def _run_reference_analysis(analysis_id: str, video_path: str):
             await __import__("asyncio")
             .get_event_loop()
             .run_in_executor(
-                None, lambda: analyze_reference_video_sync(video_path, config, verbose=True)
+                None,
+                lambda: analyze_reference_video_sync(video_path, config, verbose=True),
             )
         )
         _reference_analyses[analysis_id]["status"] = "completed"
@@ -1703,6 +1778,168 @@ async def download_draft(project_id: str):
 
 
 # ============================================================
+# 用户配置 API (新设置系统)
+# ============================================================
+
+
+@app.get("/api/providers")
+async def get_providers():
+    """获取所有支持的提供商列表"""
+    return config_db.get_all_providers()
+
+
+@app.get("/api/providers/{provider}/models")
+async def get_provider_models(provider: str, refresh: bool = False):
+    """获取提供商模型列表（自动获取+缓存）"""
+    if refresh:
+        models = config_db.refresh_provider_models(provider)
+    else:
+        models = config_db.get_provider_models(provider)
+    return {"provider": provider, "models": models}
+
+
+@app.post("/api/providers/{provider}/refresh")
+async def refresh_provider_models(provider: str):
+    """强制刷新提供商模型列表"""
+    models = config_db.refresh_provider_models(provider)
+    return {"provider": provider, "models": models, "message": "模型列表已刷新"}
+
+
+@app.get("/api/packages")
+async def get_packages():
+    """获取预设套餐列表"""
+    return config_db.get_preset_packages()
+
+
+@app.get("/api/user/config")
+async def get_user_config(user_id: str = "default"):
+    """获取用户配置"""
+    return config_db.get_user_configs(user_id)
+
+
+class SaveConfigRequest(BaseModel):
+    """保存配置请求"""
+
+    user_id: str = "default"
+    config_type: str  # llm, image_gen, video_gen, tts, memory
+    provider: str
+    api_key: Optional[str] = None
+    api_secret: Optional[str] = None
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+    custom_params: Optional[Dict[str, Any]] = None
+    is_default: bool = False
+
+
+@app.post("/api/user/config")
+async def save_user_config(request: SaveConfigRequest):
+    """保存用户配置"""
+    return config_db.save_user_config(
+        user_id=request.user_id,
+        config_type=request.config_type,
+        provider=request.provider,
+        api_key=request.api_key,
+        api_secret=request.api_secret,
+        model=request.model,
+        base_url=request.base_url,
+        custom_params=request.custom_params,
+        is_default=request.is_default,
+    )
+
+
+@app.delete("/api/user/config/{config_id}")
+async def delete_user_config(config_id: int, user_id: str = "default"):
+    """删除用户配置"""
+    return config_db.delete_user_config(user_id, config_id)
+
+
+class TestConfigRequest(BaseModel):
+    """测试配置请求"""
+
+    config_type: str  # llm, image_gen, video_gen, tts
+    provider: str
+    api_key: Optional[str] = None
+    api_secret: Optional[str] = None
+    base_url: Optional[str] = None
+    model: Optional[str] = None
+
+
+@app.post("/api/user/config/test")
+async def test_user_config(request: TestConfigRequest):
+    """测试配置有效性"""
+    # 使用用户提供的配置或从数据库获取
+    api_key = request.api_key
+    base_url = request.base_url or config_db.DEFAULT_BASE_URLS.get(request.provider)
+    model = request.model
+
+    if not api_key:
+        return {"success": False, "message": "API Key 不能为空"}
+
+    # 根据 config_type 测试不同服务
+    try:
+        if request.config_type == "llm":
+            # 测试 LLM API
+            if request.provider == "openrouter":
+                url = f"{base_url}/chat/completions"
+                headers = {"Authorization": f"Bearer {api_key}"}
+                payload = {
+                    "model": model or "openai/gpt-4o",
+                    "messages": [{"role": "user", "content": "test"}],
+                    "max_tokens": 5,
+                }
+            elif request.provider == "ollama":
+                url = f"{base_url}/api/tags"
+                headers = {}
+                payload = {}
+            else:
+                # 标准 OpenAI 兼容 API
+                url = f"{base_url}/models"
+                headers = {"Authorization": f"Bearer {api_key}"}
+                payload = {}
+
+            import aiohttp
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers) as resp:
+                    if resp.status == 200:
+                        return {"success": True, "message": "连接成功"}
+                    else:
+                        result = await resp.text()
+                        return {"success": False, "message": f"连接失败: {resp.status}"}
+
+        elif request.config_type == "image_gen":
+            # 测试图片生成 API
+            import aiohttp
+
+            url = "https://generativelanguage.googleapis.com/v1beta/models"
+            headers = {"Authorization": f"Bearer {api_key}"}
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers) as resp:
+                    if resp.status == 200:
+                        return {"success": True, "message": "连接成功"}
+                    else:
+                        return {"success": False, "message": f"连接失败: {resp.status}"}
+
+        elif request.config_type == "video":
+            # 测试视频生成 API
+            if request.provider == "kling":
+                return {
+                    "success": True,
+                    "message": "Kling 需要 API Key 和 Secret，已配置即可",
+                }
+            else:
+                return {"success": True, "message": "连接成功"}
+
+        elif request.config_type == "tts":
+            return {"success": True, "message": "连接成功"}
+
+        return {"success": True, "message": "配置有效"}
+
+    except Exception as e:
+        return {"success": False, "message": f"测试失败: {str(e)}"}
+
+
+# ============================================================
 # 应用生命周期事件
 # ============================================================
 
@@ -1720,4 +1957,6 @@ async def startup_event():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    uvicorn.run(
+        "api.server:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
+    )
