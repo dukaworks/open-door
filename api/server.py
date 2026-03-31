@@ -478,7 +478,7 @@ def _write_config_updates(updates: dict) -> None:
 # ============================================================
 
 
-async def run_workflow(project_id: str, request: CreateProjectRequest):
+async def run_workflow(project_id: str, request: CreateProjectRequest, user_id: str = None):
     """
     完整的 5 阶段视频生成工作流
 
@@ -487,6 +487,12 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
     阶段 3: 并行生成关键帧图片 + TTS 配音
     阶段 4: 图生视频
     阶段 5: 组装拼接 + 生成剪映草稿
+
+    Args:
+        project_id: 项目ID
+        request: 创建项目请求
+        user_id: 用户ID（用于从数据库读取用户配置）
+    """
     """
     # 每次新任务开始时重置图像模型黑名单，避免上次任务的失败影响本次
     from modules.image_gen import reset_failed_models
@@ -549,6 +555,7 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
                 duration_hint=request.target_duration or 60,
                 memory_context=memory_context,
                 config=config,
+                user_id=user_id,
             )
 
         # 保存脚本到项目
@@ -710,6 +717,7 @@ async def run_workflow(project_id: str, request: CreateProjectRequest):
             engine=engine,
             auto_route=auto_route,
             config=config,
+            user_id=user_id,
             verbose=True,
             resolution=request.resolution or "1080p",
         )
@@ -818,7 +826,7 @@ async def create_project(
     }
 
     save_project_meta(project_id)
-    background_tasks.add_task(run_workflow, project_id, request)
+    background_tasks.add_task(run_workflow, project_id, request, current_user.user_id)
 
     return {"project_id": project_id, "message": "工作流已启动"}
 
@@ -1137,6 +1145,7 @@ async def run_resume_workflow(
             engine=engine,
             auto_route=auto_route,
             config=config,
+            user_id=user_id,
             verbose=True,
             resolution=request.resolution or "1080p",
         )
@@ -1625,6 +1634,7 @@ async def create_project_from_analysis(
     topic: Optional[str] = Form(None),
     video_engine: Optional[str] = Form("kling"),
     add_subtitles: bool = Form(True),
+    current_user: TokenData = Depends(get_current_user),
 ):
     """
     基于对标视频分析结果直接创建新项目
@@ -1663,6 +1673,7 @@ async def create_project_from_analysis(
     project_id = str(uuid.uuid4())[:8]
     _projects[project_id] = {
         "id": project_id,
+        "user_id": current_user.user_id,  # 关联用户
         "topic": req.topic,
         "created_at": datetime.now().isoformat(),
         "status": {"stage": WorkflowStage.IDLE.value, "progress": 0},
@@ -1672,7 +1683,7 @@ async def create_project_from_analysis(
     }
 
     save_project_meta(project_id)
-    background_tasks.add_task(run_workflow, project_id, req)
+    background_tasks.add_task(run_workflow, project_id, req, current_user.user_id)
 
     return {
         "project_id": project_id,

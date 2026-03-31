@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Optional, Literal
 from datetime import datetime
 
-from core.config import PilipiliConfig, get_config
+from core.config import PilipiliConfig, get_config, VideoGenProviderConfig
 from modules.llm import Scene
 
 
@@ -36,6 +36,52 @@ from modules.llm import Scene
 # ============================================================
 
 ShotMode = Literal["multi_ref", "first_end_frame", "t2v", "i2v"]
+
+
+def _create_video_config_from_user_config(user_id: str) -> PilipiliConfig:
+    """
+    从用户配置创建视频生成专用的临时配置对象
+
+    优先级：
+    1. v3 数据库（UserConfigs + UserProviderConfigs）
+    2. config.yaml（向后兼容）
+    3. 代码默认值
+    """
+    try:
+        from api.user_config_service import UserConfigService
+        video_config = UserConfigService.get_video_config(user_id)
+        
+        # 创建临时的 PilipiliConfig 对象
+        temp_config = PilipiliConfig()
+        
+        # 根据用户选择的 provider_id，创建对应的 VideoGenProviderConfig
+        provider_cfg = VideoGenProviderConfig(
+            api_key=video_config.api_key,
+            api_secret=video_config.api_secret,
+            model=video_config.model_id,
+            base_url=video_config.base_url,
+            default_duration=video_config.duration,
+            default_ratio=video_config.ratio,
+            default_quality=video_config.quality,
+        )
+        
+        # 设置到对应的 provider
+        if video_config.provider_id == "kling":
+            temp_config.video_gen.kling = provider_cfg
+        elif video_config.provider_id == "volces":
+            temp_config.video_gen.volces = provider_cfg
+        
+        # 设置默认 provider
+        temp_config.video_gen.default_provider = video_config.provider_id
+        
+        print(f"[VideoGen] 使用用户配置: provider={video_config.provider_id}, model={video_config.model_id}")
+        return temp_config
+    except Exception as e:
+        print(f"[VideoGen] 用户配置读取失败，回退到 config.yaml: {e}")
+        return get_config()
+
+
+
 
 
 def auto_detect_shot_mode(scene: Scene) -> ShotMode:
@@ -721,6 +767,7 @@ async def generate_video_clip(
     engine: Optional[str] = None,
     auto_route: bool = True,
     config: Optional[PilipiliConfig] = None,
+    user_id: Optional[str] = None,
     verbose: bool = False,
     reference_images: Optional[list[str]] = None,
 ) -> str:
@@ -733,7 +780,8 @@ async def generate_video_clip(
         output_dir: 输出目录
         engine: 指定引擎 "kling" / "kling_omni" / "volces"（可选）
         auto_route: 是否启用智能路由
-        config: 配置对象
+        config: 配置对象（可选，如果不提供则从 user_id 或全局配置读取）
+        user_id: 用户ID（用于从数据库读取用户配置）
         verbose: 是否打印调试信息
         reference_images: 角色参考图路径列表（用于 Omni multi_ref 模式）
 
@@ -741,7 +789,11 @@ async def generate_video_clip(
         本地视频文件路径
     """
     if config is None:
-        config = get_config()
+        # 优先从用户配置读取，否则使用全局配置
+        if user_id:
+            config = _create_video_config_from_user_config(user_id)
+        else:
+            config = get_config()
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -819,9 +871,10 @@ async def generate_video_clips_omni_batch(
     scenes: list[Scene],
     keyframe_paths: dict[int, str],
     output_dir: str,
-    config: PilipiliConfig,
+    config: Optional[PilipiliConfig] = None,
     reference_images: Optional[list[str]] = None,
     batch_size: int = 6,
+    user_id: Optional[str] = None,
     verbose: bool = False,
     resolution: Optional[str] = None,
 ) -> dict[int, str]:
@@ -833,14 +886,22 @@ async def generate_video_clips_omni_batch(
         scenes: 所有分镜列表
         keyframe_paths: {scene_id: keyframe_path}
         output_dir: 输出目录
-        config: 配置
+        config: 配置（可选，如果不提供则从 user_id 或全局配置读取）
         reference_images: 全局角色参考图
         batch_size: 每批最多分镜数（Omni 最大6）
+        user_id: 用户ID（用于从数据库读取用户配置）
         verbose: 是否打印调试信息
 
     Returns:
         {scene_id: video_path} 字典
     """
+    # 优先从用户配置读取，否则使用全局配置
+    if config is None:
+        if user_id:
+            config = _create_video_config_from_user_config(user_id)
+        else:
+            config = get_config()
+
     os.makedirs(output_dir, exist_ok=True)
     results = {}
 
@@ -916,6 +977,7 @@ async def generate_all_video_clips(
     engine: Optional[str] = None,
     auto_route: bool = True,
     config: Optional[PilipiliConfig] = None,
+    user_id: Optional[str] = None,
     max_concurrent: int = 3,
     verbose: bool = False,
     reference_images: Optional[list[str]] = None,
@@ -933,8 +995,12 @@ async def generate_all_video_clips(
     Returns:
         {scene_id: video_path} 字典
     """
+    # 优先从用户配置读取，否则使用全局配置
     if config is None:
-        config = get_config()
+        if user_id:
+            config = _create_video_config_from_user_config(user_id)
+        else:
+            config = get_config()
 
     # 确定是否使用 Omni 批量模式
     selected_engine = engine or (config.video_gen.default_provider if not auto_route else None)
@@ -954,6 +1020,7 @@ async def generate_all_video_clips(
             output_dir=output_dir,
             config=config,
             reference_images=reference_images,
+            user_id=user_id,
             verbose=verbose,
             resolution=resolution,
         )
@@ -978,6 +1045,7 @@ async def generate_all_video_clips(
                 engine=engine,
                 auto_route=auto_route,
                 config=config,
+                user_id=user_id,
                 verbose=verbose,
                 reference_images=reference_images,
             )
@@ -996,6 +1064,7 @@ def generate_all_video_clips_sync(
     engine: Optional[str] = None,
     auto_route: bool = True,
     config: Optional[PilipiliConfig] = None,
+    user_id: Optional[str] = None,
     max_concurrent: int = 3,
     verbose: bool = False,
     reference_images: Optional[list[str]] = None,
@@ -1011,6 +1080,7 @@ def generate_all_video_clips_sync(
             engine=engine,
             auto_route=auto_route,
             config=config,
+            user_id=user_id,
             max_concurrent=max_concurrent,
             verbose=verbose,
             reference_images=reference_images,

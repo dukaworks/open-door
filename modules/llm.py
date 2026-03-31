@@ -273,6 +273,43 @@ VIDEO_ANALYSIS_PROMPT = """你是一位专业的视频分析师和逆向工程�
 # ============================================================
 
 
+def _create_llm_config_from_user_config(user_id: str) -> PilipiliConfig:
+    """
+    从用户配置创建 LLM 专用的临时配置对象
+
+    优先级：
+    1. v3 数据库（UserConfigs + UserProviderConfigs）
+    2. config.yaml（向后兼容）
+    3. 代码默认值
+    """
+    try:
+        from api.user_config_service import UserConfigService
+        llm_config = UserConfigService.get_llm_config(user_id)
+
+        # 创建临时的 PilipiliConfig 对象
+        temp_config = PilipiliConfig()
+
+        # 设置默认 provider
+        temp_config.llm.default_provider = llm_config.provider_id
+
+        # 根据用户选择的 provider_id，创建对应的 LLMProviderConfig
+        from core.config import LLMProviderConfig
+        provider_cfg = LLMProviderConfig(
+            api_key=llm_config.api_key,
+            model=llm_config.model_id,
+            base_url=llm_config.base_url,
+        )
+
+        # 设置到对应的 provider
+        setattr(temp_config.llm, llm_config.provider_id, provider_cfg)
+
+        print(f"[LLM] 使用用户配置: provider={llm_config.provider_id}, model={llm_config.model_id}")
+        return temp_config
+    except Exception as e:
+        print(f"[LLM] 用户配置读取失败，回退到 config.yaml: {e}")
+        return get_config()
+
+
 def _build_openai_client(config: PilipiliConfig) -> tuple[AsyncOpenAI, str]:
     """根据配置构建 OpenAI 兼容客户端"""
     provider = config.llm.default_provider
@@ -305,6 +342,7 @@ async def generate_script(
     num_scenes: Optional[int] = None,
     memory_context: Optional[str] = None,
     config: Optional[PilipiliConfig] = None,
+    user_id: Optional[str] = None,
     verbose: bool = False,
 ) -> VideoScript:
     """
@@ -316,14 +354,19 @@ async def generate_script(
         duration_hint: 目标时长（秒）
         num_scenes: 分镜数量（可选，不指定则由 LLM 决定）
         memory_context: 从 Mem0 检索到的用户偏好（可选）
-        config: 配置对象（可选，默认加载全局配置）
+        config: 配置对象（可选，如果不提供则从 user_id 或全局配置读取）
+        user_id: 用户ID（用于从数据库读取用户配置）
         verbose: 是否打印调试信息
 
     Returns:
         VideoScript 对象
     """
     if config is None:
-        config = get_config()
+        # 优先从用户配置读取，否则使用全局配置
+        if user_id:
+            config = _create_llm_config_from_user_config(user_id)
+        else:
+            config = get_config()
 
     client, model = _build_openai_client(config)
 
@@ -858,6 +901,7 @@ def generate_script_sync(
     num_scenes: Optional[int] = None,
     memory_context: Optional[str] = None,
     config: Optional[PilipiliConfig] = None,
+    user_id: Optional[str] = None,
     verbose: bool = False,
 ) -> VideoScript:
     """generate_script 的同步版本"""
@@ -869,6 +913,7 @@ def generate_script_sync(
             num_scenes=num_scenes,
             memory_context=memory_context,
             config=config,
+            user_id=user_id,
             verbose=verbose,
         )
     )

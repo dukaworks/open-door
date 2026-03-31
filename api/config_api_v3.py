@@ -665,6 +665,11 @@ async def save_provider_config(
             is_active=request.is_active,
             is_default=request.is_default,
         )
+
+        # 清除用户配置缓存，使修改立即生效
+        from api.user_config_service import UserConfigService
+        UserConfigService.invalidate_cache(current_user.user_id)
+
         return SuccessResponse(success=True, message="配置已保存")
     except Exception as e:
         raise HTTPException(
@@ -1519,7 +1524,11 @@ async def update_user_config(
                         now,
                     )
                 )
-        
+
+        # 清除用户配置缓存，使修改立即生效
+        from api.user_config_service import UserConfigService
+        UserConfigService.invalidate_cache(current_user.user_id)
+
         return SuccessResponse(success=True, message="配置已更新")
     except Exception as e:
         raise HTTPException(
@@ -1617,7 +1626,11 @@ async def apply_package(
                         now,
                     )
                 )
-        
+
+        # 清除用户配置缓存，使修改立即生效
+        from api.user_config_service import UserConfigService
+        UserConfigService.invalidate_cache(current_user.user_id)
+
         return SuccessResponse(success=True, message=f"已应用套餐: {request.package_id}")
     except HTTPException:
         raise
