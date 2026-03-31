@@ -37,7 +37,7 @@ class Scene:
     scene_id: int
     duration: float  # 秒，由 TTS 时长动态决定
     image_prompt: str  # 发给 Nano Banana 的生图提示词（英文）
-    video_prompt: str  # 发给 Kling/Seedance 的运动描述（英文）
+    video_prompt: str  # 发给 Kling/Volces（字节火山方舟）的运动描述（英文）
     voiceover: str = ""  # 中文旁白文案（发给 TTS），默认空字符串防止 None 崩溃
     transition: str = "crossfade"  # 转场类型: crossfade / fade / wipe / cut
     camera_motion: str = "static"  # 镜头运动: static / pan_left / pan_right / zoom_in / zoom_out

@@ -93,7 +93,7 @@ const resources = {
       heroTitle: "一个点子 一句话",
       heroSubtitle2: "从创意到大片",
       supportedModels:
-        "支持 DeepSeek · Kimi · Gemini · Kling · Seedance · MiniMax",
+        "支持 DeepSeek · Kimi · Gemini · Kling · 字节火山方舟 · MiniMax",
 
       // Features
       feature1Title: "智能脚本策划",
@@ -107,7 +107,7 @@ const resources = {
         "上传角色参考图（支持四宫格三视图），Kling Omni 多参考模式保持全片人物高度一致。",
       feature4Title: "Kling Omni Multi-Shot",
       feature4Desc:
-        "全新 Kling 3.0 Omni 引擎，支持多参考生视频、首尾帧、shot_type intelligence，分镜更连贯。",
+        "全新 可灵 Omni 引擎，支持多参考生视频、首尾帧、shot_type intelligence，分镜更连贯。",
       feature5Title: "动态音画对齐",
       feature5Desc:
         "先生成 MiniMax TTS 配音并测量精确时长，再以此控制视频 duration，音画永远同步。",
@@ -139,7 +139,7 @@ const resources = {
       compareRow1: "自然语言对话 + 对标视频分析，一句话驱动",
       compareRow2: "Gemini 自动分析分镜结构，反推提示词、识别人物",
       compareRow3: "四宫格三视图 + Kling Omni 多参考模式",
-      compareRow4: "Kling 3.0 Omni + Seedance 1.5 双引擎智能路由",
+      compareRow4: "可灵 + 字节火山方舟 双引擎智能路由",
       compareRow5: "先测配音时长，再控视频 duration",
       compareRow6: "剪映分轨草稿 + MP4 双输出",
       compareRow7: "Mem0 数字孪生，越用越懂你",
@@ -288,7 +288,7 @@ const resources = {
       heroTitle: "One Idea, One Sentence",
       heroSubtitle2: "From Concept to Blockbuster",
       supportedModels:
-        "Supports DeepSeek · Kimi · Gemini · Kling · Seedance · MiniMax",
+        "Supports DeepSeek · Kimi · Gemini · Kling · 字节火山方舟 · MiniMax",
 
       // Features
       feature1Title: "Intelligent Script Planning",
@@ -302,7 +302,7 @@ const resources = {
         "Upload character reference images (supports 4-grid front/side/view), Kling Omni multi-reference mode maintains character consistency.",
       feature4Title: "Kling Omni Multi-Shot",
       feature4Desc:
-        "All-new Kling 3.0 Omni engine, supports multi-reference video generation, first/last frames, shot_type intelligence.",
+        "All-new 可灵 Omni engine, supports multi-reference video generation, first/last frames, shot_type intelligence.",
       feature5Title: "Dynamic Audio-Video Sync",
       feature5Desc:
         "Generate MiniMax TTS voiceover first with precise duration measurement, then control video duration for perfect sync.",
@@ -340,7 +340,7 @@ const resources = {
         "Gemini automatically analyzes scene structure, reverse-engineers prompts, identifies characters",
       compareRow3: "4-grid front/side/view + Kling Omni multi-reference mode",
       compareRow4:
-        "Kling 3.0 Omni + Seedance 1.5 dual-engine intelligent routing",
+        "可灵 + 字节火山方舟 dual-engine intelligent routing",
       compareRow5: "Measure voice duration first, then control video duration",
       compareRow6: "JianYin separate track draft + MP4 dual output",
       compareRow7: "Mem0 digital twin, gets smarter over time",
@@ -491,7 +491,7 @@ const resources = {
       heroTitle: "一個點子 一句話",
       heroSubtitle2: "從創意到大片",
       supportedModels:
-        "支援 DeepSeek · Kimi · Gemini · Kling · Seedance · MiniMax",
+        "支援 DeepSeek · Kimi · Gemini · Kling · 字节火山方舟 · MiniMax",
 
       // Features
       feature1Title: "智慧腳本策劃",
@@ -505,7 +505,7 @@ const resources = {
         "上傳角色參考圖（支援四宮格三視圖），Kling Omni 多參考模式保持全片人物高度一致。",
       feature4Title: "Kling Omni Multi-Shot",
       feature4Desc:
-        "全新 Kling 3.0 Omni 引擎，支援多參考生影片、首尾幀、shot_type intelligence，分鏡更連貫。",
+        "全新 可灵 Omni 引擎，支援多參考生影片、首尾幀、shot_type intelligence，分鏡更連貫。",
       feature5Title: "動態音畫對齊",
       feature5Desc:
         "先生成 MiniMax TTS 配音並測量精確時長，再以此控制影片 duration，音畫永遠同步。",
@@ -537,7 +537,7 @@ const resources = {
       compareRow1: "自然語言對話 + 標竿影片分析，一句話驅動",
       compareRow2: "Gemini 自動分析分鏡結構，反推提示詞、識別人物",
       compareRow3: "四宮格三視圖 + Kling Omni 多參考模式",
-      compareRow4: "Kling 3.0 Omni + Seedance 1.5 雙引擎智慧路由",
+      compareRow4: "可灵 + 字节火山方舟 雙引擎智慧路由",
       compareRow5: "先測配音時長，再控影片 duration",
       compareRow6: "剪映分軌草稿 + MP4 雙輸出",
       compareRow7: "Mem0 數位孿生，越用越懂你",

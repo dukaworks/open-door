@@ -266,7 +266,7 @@ class CreateProjectRequest(BaseModel):
     style: Optional[str] = None
     target_duration: Optional[int] = 60  # 目标时长（秒）
     voice_id: Optional[str] = None
-    video_engine: Optional[str] = "kling"  # "kling" / "seedance" / "auto"
+    video_engine: Optional[str] = "kling"  # "kling" / "volces" / "auto"
     reference_images: Optional[list[str]] = []  # 角色参考图路径
     add_subtitles: bool = True
     auto_publish: bool = False
@@ -410,7 +410,7 @@ class UpdateApiKeysRequest(BaseModel):
     tts_api_key: Optional[str] = None
     kling_api_key: Optional[str] = None
     kling_api_secret: Optional[str] = None
-    seedance_api_key: Optional[str] = None
+    volces_api_key: Optional[str] = None
     mem0_api_key: Optional[str] = None
 
 
@@ -956,8 +956,8 @@ async def update_api_keys(request: UpdateApiKeysRequest):
     if request.kling_api_secret:
         updates["video_gen.kling.api_secret"] = request.kling_api_secret
 
-    if request.seedance_api_key:
-        updates["video_gen.seedance.api_key"] = request.seedance_api_key
+    if request.volces_api_key:
+        updates["video_gen.volces.api_key"] = request.volces_api_key
 
     if request.mem0_api_key:
         updates["memory.mem0_api_key"] = request.mem0_api_key
@@ -1234,14 +1234,14 @@ async def get_keys_status():
                 config.video_gen.kling.api_key and config.video_gen.kling.api_secret
             ),
         },
-        "seedance": {
-            "configured": bool(config.video_gen.seedance.api_key),
+        "volces": {
+            "configured": bool(config.video_gen.volces.api_key),
         },
     }
 
 
 class TestKeyRequest(BaseModel):
-    service: str  # llm / image_gen / tts / kling / seedance
+    service: str  # llm / image_gen / tts / kling / volces
 
 
 @app.post("/api/settings/keys/test")
@@ -1363,14 +1363,14 @@ async def test_api_key(request: TestKeyRequest):
                 }
             return {"success": True, "message": "Kling API 认证成功"}
 
-        elif service == "seedance":
-            if not config.video_gen.seedance.api_key:
+        elif service == "volces":
+            if not config.video_gen.volces.api_key:
                 return {"success": False, "message": "API Key 未配置"}
             import aiohttp
 
-            url = f"{config.video_gen.seedance.base_url}/contents/generations/tasks"
+            url = f"{config.video_gen.volces.base_url}/contents/generations/tasks"
             headers = {
-                "Authorization": f"Bearer {config.video_gen.seedance.api_key}",
+                "Authorization": f"Bearer {config.video_gen.volces.api_key}",
                 "Content-Type": "application/json",
             }
             async with aiohttp.ClientSession() as session:
@@ -1379,9 +1379,9 @@ async def test_api_key(request: TestKeyRequest):
             if status == 401 or status == 403:
                 return {
                     "success": False,
-                    "message": f"Seedance 认证失败 (HTTP {status})，请检查 API Key",
+                    "message": f"字节火山方舟 认证失败 (HTTP {status})，请检查 API Key",
                 }
-            return {"success": True, "message": "Seedance API 认证成功"}
+            return {"success": True, "message": "字节火山方舟 API 认证成功"}
 
         else:
             return {"success": False, "message": f"未知服务: {service}"}

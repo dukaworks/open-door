@@ -1,6 +1,6 @@
 /*
  * Settings.tsx — API 连接器配置页面（真实 API 对接版）
- * Design: Seedance 2.0 inspired — soft blue-grey bg, white cards
+ * Design: Soft blue-grey bg, white cards
  *
  * 配置通过 POST /api/settings/keys 保存到后端
  * 状态通过 GET /api/settings/keys/status 从后端读取
@@ -104,47 +104,44 @@ const DEFAULT_FIELDS: ApiField[] = [
     testService: "llm",
   },
   {
-    id: "nano_banana",
+    id: "aliyun-image",
     category: "视觉层 (生图)",
-    name: "Nano Banana (Gemini 3 Pro Image)",
-    description:
-      "4K 首帧锁定，主体一致性基础，目前最强文生图 API（与 Gemini LLM 共用同一 Key）",
-    placeholder: "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxx",
-    docsUrl: "https://aistudio.google.com/app/apikey",
+    name: "阿里云百炼 (通义万相)",
+    description: "通义万相 AI 绘画，4K 高清输出，适合专业创作",
+    placeholder: "sk-xxxxxxxxxxxxxxxxxxxxxxxx",
+    docsUrl: "https://help.aliyun.com/zh/dashscope/developer-reference/axd-dashscope/wanx-v2-prompt",
     apiKey: "image_gen_api_key",
     value: "",
     enabled: true,
     testService: "image_gen",
   },
   {
-    id: "kling",
+    id: "aliyun-video",
     category: "动态层 (视频)",
-    name: "Kling 3.0",
-    description: "动作/产品/抖音短视频首选，动态能量强，渲染快",
-    placeholder: "API Key",
-    docsUrl: "https://app.klingai.com/global/dev/document-api",
-    apiKey: "kling_api_key",
-    apiSecretKey: "kling_api_secret",
-    secretPlaceholder: "API Secret",
+    name: "阿里云百炼 (通义万相视频)",
+    description: "通义万相视频生成，支持文字生视频，高质量输出",
+    placeholder: "sk-xxxxxxxxxxxxxxxxxxxxxxxx",
+    docsUrl: "https://help.aliyun.com/zh/dashscope/developer-reference/axd-dashscope/t2v",
+    apiKey: "video_gen_api_key",
     value: "",
     secretValue: "",
     enabled: true,
-    testService: "kling",
+    testService: "video_gen",
   },
   {
-    id: "seedance",
+    id: "volces-video",
     category: "动态层 (视频)",
-    name: "Seedance 1.5 Pro (字节火山引擎)",
-    description: "叙事短剧/多角色连戏首选，主体一致性极强，支持原生音画同步",
+    name: "字节火山方舟",
+    description: "Doubao大模型，适合短视频内容创作",
     placeholder: "xxxxxxxxxxxxxxxxxxxxxxxx",
     docsUrl: "https://www.volcengine.com/docs/82379",
-    apiKey: "seedance_api_key",
+    apiKey: "volces_api_key",
     value: "",
     enabled: false,
-    testService: "seedance",
+    testService: "video_gen",
   },
   {
-    id: "minimax_tts",
+    id: "minimax",
     category: "配音层 (TTS)",
     name: "MiniMax Speech 2.8 HD",
     description: "中文自然度业界领先，支持声音克隆和情感控制",
@@ -216,13 +213,13 @@ export default function Settings({ embedded = false, onSaved }: SettingsProps) {
             ) {
               isConfigured =
                 status.llm.configured && status.llm.provider === f.id;
-            } else if (f.id === "nano_banana") {
+            } else if (f.id === "aliyun-image") {
               isConfigured = status.image_gen.configured;
-            } else if (f.id === "kling") {
-              isConfigured = status.kling.configured;
-            } else if (f.id === "seedance") {
-              isConfigured = status.seedance.configured;
-            } else if (f.id === "minimax_tts") {
+            } else if (f.id === "aliyun-video") {
+              isConfigured = status.video_gen.configured;
+            } else if (f.id === "volces-video") {
+              isConfigured = status.volces?.configured || false;
+            } else if (f.id === "minimax") {
               isConfigured = status.tts.configured;
             }
             return { ...f, isConfigured };
@@ -319,13 +316,13 @@ export default function Settings({ embedded = false, onSaved }: SettingsProps) {
           if (["deepseek", "kimi", "minimax_llm", "gemini"].includes(f.id)) {
             isConfigured =
               status.llm.configured && status.llm.provider === f.id;
-          } else if (f.id === "nano_banana") {
+          } else if (f.id === "aliyun-image") {
             isConfigured = status.image_gen.configured;
-          } else if (f.id === "kling") {
-            isConfigured = status.kling.configured;
-          } else if (f.id === "seedance") {
-            isConfigured = status.seedance.configured;
-          } else if (f.id === "minimax_tts") {
+          } else if (f.id === "aliyun-video") {
+            isConfigured = status.video_gen.configured;
+          } else if (f.id === "volces-video") {
+            isConfigured = status.volces?.configured || false;
+          } else if (f.id === "minimax") {
             isConfigured = status.tts.configured;
           }
           return { ...f, isConfigured, value: "", secretValue: "" };

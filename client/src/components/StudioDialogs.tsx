@@ -27,10 +27,13 @@ export function StudioDialogs({ open, onClose }: StudioDialogsProps) {
       <Dialog
         open={open === "settings"}
         onOpenChange={isOpen => !isOpen && onClose()}
+        modal={true}
       >
         <DialogContent
-          className="!max-w-[1400px] !w-[1400px] !h-[90vh] !p-0 bg-card"
-          style={{ maxWidth: "1400px", width: "1400px", height: "90vh" }}
+          className="!max-w-[60vw] !w-[60vw] !h-[75vh] !p-0 bg-card"
+          style={{ maxWidth: "60vw", width: "60vw", height: "75vh" }}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
         >
           {/* 隐藏的标题和描述，用于无障碍访问 */}
           <DialogHeader className="sr-only">

@@ -161,7 +161,7 @@ export function useWorkflow() {
       topic: string;
       style?: string;
       duration?: number;
-      engine?: "kling" | "seedance" | "auto";
+      engine?: "kling" | "volces" | "auto";
       voiceId?: string;
       referenceImages?: string[];
       addSubtitles?: boolean;

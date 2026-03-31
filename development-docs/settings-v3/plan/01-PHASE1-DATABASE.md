@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS providers (
 - deepseek, kimi, minimax, gemini (llm)
 - nano_banana (image)
 - kling, seedance (video)
-- minimax_tts (tts)
+- minimax (tts)
 
 **完成检查**：
 - [ ] 表创建成功

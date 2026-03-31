@@ -401,7 +401,6 @@ def get_user_by_id(user_id: str) -> Optional[User]:
 
     is_admin = row[6] == 1 if len(row) > 6 else False
     avatar_url = row[7] if len(row) > 7 else None
-    print(f"[get_user_by_id] user_id={user_id}, avatar_url={avatar_url}")
     return User(
         id=row[0],
         username=row[1],

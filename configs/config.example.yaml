@@ -46,32 +46,32 @@ image_gen:
   output_resolution: "4K"
 
 # ============================================================
-# 生视频层：Kling 3.0（默认）/ Seedance 1.5（可选）
+# 生视频层：Kling 3.0（默认）/ 字节火山方舟（可选）
 # ============================================================
 video_gen:
-  default_provider: "kling"   # 可选: kling / seedance
+  default_provider: "kling"   # 可选: kling / volces
 
   kling:
     api_key: "YOUR_KLING_API_KEY"
     api_secret: "YOUR_KLING_API_SECRET"
-    model: "kling-v3"
-    base_url: "https://api-beijing.klingai.com"   # 国内版；国际版用 https://api-singapore.klingai.com
+    model: "kling-3.0"
+    base_url: "https://api.klingai.com/v1"   # 国内版；国际版用 https://api-singapore.klingai.com
     default_duration: 5          # 秒，会被 TTS 时长动态覆盖
     default_ratio: "16:9"
     default_quality: "high"
 
-  seedance:
+  volces:
     api_key: "YOUR_VOLCENGINE_API_KEY"
-    model: "doubao-seedance-1-5-pro-250528"
+    model: "doubao-lite"
     base_url: "https://ark.cn-beijing.volces.com/api/v3"
     default_duration: 5
     default_ratio: "16:9"
 
 # ============================================================
-# 配音层：MiniMax TTS（文案类）/ Seedance 原生音频（剧情类）
+# 配音层：MiniMax TTS（文案类）
 # ============================================================
 tts:
-  default_provider: "minimax"   # 可选: minimax / seedance_audio
+  default_provider: "minimax"   # 可选: minimax
 
   minimax:
     api_key: "YOUR_MINIMAX_API_KEY"

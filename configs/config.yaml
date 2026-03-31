@@ -33,14 +33,14 @@ video_gen:
   kling:
     api_key: YOUR_KLING_API_KEY
     api_secret: YOUR_KLING_API_SECRET
-    model: kling-v3
-    base_url: https://api-beijing.klingai.com
+    model: kling-3.0
+    base_url: https://api.klingai.com/v1
     default_duration: 5
     default_ratio: '16:9'
     default_quality: high
-  seedance:
+  volces:
     api_key: YOUR_VOLCENGINE_API_KEY
-    model: doubao-seedance-1-5-pro-250528
+    model: doubao-lite
     base_url: https://ark.cn-beijing.volces.com/api/v3
     default_duration: 5
     default_ratio: '16:9'

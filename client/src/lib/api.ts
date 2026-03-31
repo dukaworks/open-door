@@ -94,7 +94,7 @@ export interface CreateProjectRequest {
   style?: string;
   target_duration?: number;
   voice_id?: string;
-  video_engine?: "kling" | "seedance" | "auto";
+  video_engine?: "kling" | "volces" | "auto";
   reference_images?: string[];
   add_subtitles?: boolean;
   auto_publish?: boolean;
@@ -107,7 +107,7 @@ export interface ApiKeysStatus {
   image_gen: { provider: string; configured: boolean };
   tts: { provider: string; configured: boolean };
   kling: { configured: boolean };
-  seedance: { configured: boolean };
+  volces: { configured: boolean };
 }
 
 export interface UpdateApiKeysRequest {
@@ -117,7 +117,7 @@ export interface UpdateApiKeysRequest {
   tts_api_key?: string;
   kling_api_key?: string;
   kling_api_secret?: string;
-  seedance_api_key?: string;
+  volces_api_key?: string;
   mem0_api_key?: string;
 }
 

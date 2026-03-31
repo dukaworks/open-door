@@ -1,7 +1,7 @@
 /**
  * Studio.tsx — 芝麻开门 主工作台 v2.1
  *
- * 设计：保持原有 Seedance 浅色风格（soft blue-grey bg, white cards, serif headings）
+ * 设计：保持原有浅色风格（soft blue-grey bg, white cards, serif headings）
  * 功能布局参考 Kling Omni：
  *   - 左侧图标导航栏（可折叠）
  *   - 中间主区：角色参考图横排 + 消息区（可滚动）+ 输入区 + 底部工具栏
@@ -138,8 +138,8 @@ const SHOT_MODE_BADGE: Record<ShotMode, { label: string; cls: string }> = {
 };
 
 const ENGINE_OPTIONS = [
-  { value: "kling", label: "Kling 3.0 Omni", desc: "多参考·首尾帧·多分镜" },
-  { value: "seedance", label: "Seedance 1.5", desc: "叙事·多角色·长镜头" },
+  { value: "kling", label: "可灵", desc: "多参考·首尾帧·多分镜" },
+  { value: "volces", label: "字节火山方舟", desc: "Doubao模型·短视频创作" },
   { value: "auto", label: "智能路由", desc: "自动选择最优引擎" },
 ];
 
@@ -434,8 +434,8 @@ function BottomToolbar({
   isConnected,
   stage,
 }: {
-  engine: "kling" | "seedance" | "auto";
-  onEngineChange: (v: "kling" | "seedance" | "auto") => void;
+  engine: "kling" | "volces" | "auto";
+  onEngineChange: (v: "kling" | "volces" | "auto") => void;
   multiShot: boolean;
   onMultiShotChange: (v: boolean) => void;
   resolution: "720p" | "1080p";
@@ -483,7 +483,7 @@ function BottomToolbar({
               <button
                 key={opt.value}
                 onClick={() => {
-                  onEngineChange(opt.value as "kling" | "seedance" | "auto");
+                  onEngineChange(opt.value as "kling" | "volces" | "auto");
                   setEngineOpen(false);
                 }}
                 className={`w-full text-left px-3 py-2 hover:bg-secondary transition-colors ${engine === opt.value ? "bg-primary/5" : ""}`}
@@ -1981,7 +1981,7 @@ export default function Studio() {
   const [lastWorkflowParams, setLastWorkflowParams] = useState<
     Parameters<typeof startWorkflow>[0] | null
   >(null);
-  const [engine, setEngine] = useState<"kling" | "seedance" | "auto">("kling");
+  const [engine, setEngine] = useState<"kling" | "volces" | "auto">("kling");
   const [multiShot, setMultiShot] = useState(true);
   const [resolution, setResolution] = useState<"720p" | "1080p">("1080p");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -2400,9 +2400,7 @@ export default function Studio() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-full py-12 px-6">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 bg-gradient-to-br from-[oklch(0.55_0.22_270)/0.15] to-[oklch(0.60_0.20_190)/0.1] border border-[oklch(0.55_0.22_270)/0.2]">
-                <Sparkles size={28} className="text-[oklch(0.60_0.20_190)]" />
-              </div>
+              <img src="/images/logo.png" alt="Logo" className="w-16 h-16 rounded-2xl mb-6" />
               <h3
                 className="text-xl font-semibold bg-gradient-to-r from-[oklch(0.55_0.22_270)] to-[oklch(0.60_0.20_190)] bg-clip-text text-transparent mb-2"
                 style={{ fontFamily: "'Playfair Display', serif" }}

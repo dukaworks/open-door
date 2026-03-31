@@ -86,13 +86,13 @@ class VideoGenConfig:
     default_provider: str = "kling"
     kling: VideoGenProviderConfig = field(
         default_factory=lambda: VideoGenProviderConfig(
-            model="kling-v3",
-            base_url="https://api.klingai.com",
+            model="kling-3.0",
+            base_url="https://api.klingai.com/v1",
         )
     )
-    seedance: VideoGenProviderConfig = field(
+    volces: VideoGenProviderConfig = field(
         default_factory=lambda: VideoGenProviderConfig(
-            model="doubao-seedance-1-5-pro-250528",
+            model="doubao-lite",
             base_url="https://ark.cn-beijing.volces.com/api/v3",
         )
     )
@@ -206,7 +206,7 @@ def load_config(config_path: Optional[str] = None) -> PilipiliConfig:
         "OPENAI_API_KEY": ("llm", "openai", "api_key"),
         "KLING_API_KEY": ("video_gen", "kling", "api_key"),
         "KLING_API_SECRET": ("video_gen", "kling", "api_secret"),
-        "VOLCENGINE_API_KEY": ("video_gen", "seedance", "api_key"),
+        "VOLCENGINE_API_KEY": ("video_gen", "volces", "api_key"),
         "MEM0_API_KEY": ("memory", "mem0_api_key"),
         "LLM_PROVIDER": ("llm", "default_provider"),
         "VIDEO_PROVIDER": ("video_gen", "default_provider"),
@@ -248,7 +248,7 @@ def load_config(config_path: Optional[str] = None) -> PilipiliConfig:
         config.video_gen.default_provider = vg.get(
             "default_provider", config.video_gen.default_provider
         )
-        for provider in ["kling", "seedance"]:
+        for provider in ["kling", "volces"]:
             if provider in vg:
                 p = vg[provider]
                 provider_cfg = getattr(config.video_gen, provider)

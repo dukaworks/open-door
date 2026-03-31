@@ -1,19 +1,19 @@
 """
 芝麻开门 Open-Door
-视频生成模块 - Kling Omni / Kling v3 / Seedance 1.5
+视频生成模块 - Kling Omni / Kling v3 / Volces（字节火山方舟）
 
 v2.0 改动：
-- 新增 Kling Omni API（/v1/videos/omni-video）支持
+|- 新增 Kling Omni API（/v1/videos/omni-video）支持
   - 多镜头模式（multi_shot=true，最多6个分镜一次调用）
   - 多参考图（image_list，最多3个主体）
   - 首尾帧控制（first_frame_image + end_frame_image）
   - 文生视频（无参考图）
-- 新增 shot_mode 自动判断逻辑
+|- 新增 shot_mode 自动判断逻辑
   - multi_ref：有固定人物 + 动作场景 → Omni 多参考生视频
   - first_end_frame：场景转换/运镜 → Omni 首尾帧生视频
   - t2v：纯风景/氛围 → Omni 文生视频
   - i2v：兼容旧版图生视频（默认回退）
-- 保留 Seedance 1.5 作为备选引擎
+|- 支持 Volces（字节火山方舟）作为备选引擎
 """
 
 import os
@@ -141,12 +141,12 @@ def smart_route_engine(scene: Scene, default: str = "kling") -> str:
     根据场景内容智能选择视频引擎
 
     规则：
-    - 包含对话/口型同步关键词 → Seedance（原生音素级口型同步）
-    - 包含多人/多角色场景 → Seedance（多主体一致性更强）
+    - 包含对话/口型同步关键词 → Volces（原生音素级口型同步）
+    - 包含多人/多角色场景 → Volces（多主体一致性更强）
     - 包含动作/运动/体育 → Kling（动态能量更强）
     - 其他 → 使用默认引擎
     """
-    seedance_keywords = [
+    volces_keywords = [
         "talking",
         "speaking",
         "dialogue",
@@ -187,12 +187,12 @@ def smart_route_engine(scene: Scene, default: str = "kling") -> str:
 
     prompt_lower = (scene.video_prompt + " " + " ".join(scene.style_tags)).lower()
 
-    seedance_score = sum(1 for kw in seedance_keywords if kw.lower() in prompt_lower)
+    volces_score = sum(1 for kw in volces_keywords if kw.lower() in prompt_lower)
     kling_score = sum(1 for kw in kling_keywords if kw.lower() in prompt_lower)
 
-    if seedance_score > kling_score:
-        return "seedance"
-    elif kling_score > seedance_score:
+    if volces_score > kling_score:
+        return "volces"
+    elif kling_score > volces_score:
         return "kling"
     else:
         return default
@@ -608,21 +608,21 @@ async def _poll_kling_task(
 
 
 # ============================================================
-# Seedance 1.5 API
+# Volces（字节火山方舟）API
 # ============================================================
 
 
-async def _submit_seedance_i2v(
+async def _submit_volces_i2v(
     image_path: str,
     scene: Scene,
     config: PilipiliConfig,
     session: aiohttp.ClientSession,
 ) -> str:
-    """提交 Seedance I2V 任务，返回 task_id"""
-    api_key = config.video_gen.seedance.api_key
+    """提交 Volces I2V 任务，返回 task_id"""
+    api_key = config.video_gen.volces.api_key
 
     if not api_key:
-        raise ValueError("Seedance (Volcengine) API Key 未配置")
+        raise ValueError("Volces（字节火山方舟）API Key 未配置")
 
     ext = Path(image_path).suffix.lower()
     mime_map = {
@@ -638,17 +638,17 @@ async def _submit_seedance_i2v(
     duration = 5 if scene.duration <= 7 else 10
 
     payload = {
-        "model": config.video_gen.seedance.model or "doubao-seedance-1-5-pro-250528",
+        "model": config.video_gen.volces.model or "doubao-seedance-1-5-pro-250528",
         "content": [
             {"type": "image_url", "image_url": {"url": image_data_url}},
             {"type": "text", "text": scene.video_prompt},
         ],
         "duration": duration,
-        "ratio": config.video_gen.seedance.default_ratio or "16:9",
+        "ratio": config.video_gen.volces.default_ratio or "16:9",
         "seed": -1,
     }
 
-    url = f"{config.video_gen.seedance.base_url}/contents/generations/tasks"
+    url = f"{config.video_gen.volces.base_url}/contents/generations/tasks"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -660,25 +660,25 @@ async def _submit_seedance_i2v(
             result = json.loads(resp_text)
         except json.JSONDecodeError:
             raise RuntimeError(
-                f"Seedance API 返回非 JSON 响应 (HTTP {resp.status}): {resp_text[:200]}"
+                f"Volces API 返回非 JSON 响应 (HTTP {resp.status}): {resp_text[:200]}"
             )
 
     if "id" not in result:
-        raise RuntimeError(f"Seedance 任务提交失败: {result}")
+        raise RuntimeError(f"Volces 任务提交失败: {result}")
 
     return result["id"]
 
 
-async def _poll_seedance_task(
+async def _poll_volces_task(
     task_id: str,
     config: PilipiliConfig,
     session: aiohttp.ClientSession,
     timeout: int = 300,
     poll_interval: int = 5,
 ) -> str:
-    """轮询 Seedance 任务状态，返回视频 URL"""
-    api_key = config.video_gen.seedance.api_key
-    url = f"{config.video_gen.seedance.base_url}/contents/generations/tasks/{task_id}"
+    """轮询 Volces 任务状态，返回视频 URL"""
+    api_key = config.video_gen.volces.api_key
+    url = f"{config.video_gen.volces.base_url}/contents/generations/tasks/{task_id}"
     headers = {"Authorization": f"Bearer {api_key}"}
     start_time = time.time()
 
@@ -689,7 +689,7 @@ async def _poll_seedance_task(
                 result = json.loads(resp_text)
             except json.JSONDecodeError:
                 raise RuntimeError(
-                    f"Seedance 轮询返回非 JSON 响应 (HTTP {resp.status}): {resp_text[:200]}"
+                    f"Volces 轮询返回非 JSON 响应 (HTTP {resp.status}): {resp_text[:200]}"
                 )
 
         status = result.get("status", "")
@@ -699,14 +699,14 @@ async def _poll_seedance_task(
             for item in content:
                 if item.get("type") == "video_url":
                     return item["video_url"]["url"]
-            raise RuntimeError("Seedance 任务成功但无视频 URL")
+            raise RuntimeError("Volces 任务成功但无视频 URL")
 
         elif status == "failed":
-            raise RuntimeError(f"Seedance 任务失败: {result.get('error', '未知错误')}")
+            raise RuntimeError(f"Volces 任务失败: {result.get('error', '未知错误')}")
 
         await asyncio.sleep(poll_interval)
 
-    raise TimeoutError(f"Seedance 任务 {task_id} 超时（{timeout}s）")
+    raise TimeoutError(f"Volces 任务 {task_id} 超时（{timeout}s）")
 
 
 # ============================================================
@@ -731,7 +731,7 @@ async def generate_video_clip(
         scene: 分镜场景对象
         image_path: 首帧关键图路径
         output_dir: 输出目录
-        engine: 指定引擎 "kling" / "kling_omni" / "seedance"（可选）
+        engine: 指定引擎 "kling" / "kling_omni" / "volces"（可选）
         auto_route: 是否启用智能路由
         config: 配置对象
         verbose: 是否打印调试信息
@@ -791,11 +791,11 @@ async def generate_video_clip(
                     f"[VideoGen] Kling Omni 失败，不降级处理: {omni_err}"
                 ) from omni_err
 
-        elif selected_engine == "seedance":
-            task_id = await _submit_seedance_i2v(image_path, scene, config, session)
+        elif selected_engine == "volces":
+            task_id = await _submit_volces_i2v(image_path, scene, config, session)
             if verbose:
-                print(f"[VideoGen] Seedance 任务已提交: {task_id}")
-            video_url = await _poll_seedance_task(task_id, config, session)
+                print(f"[VideoGen] Volces 任务已提交: {task_id}")
+            video_url = await _poll_volces_task(task_id, config, session)
         else:
             raise ValueError(f"不支持的视频引擎: {selected_engine}")
 
@@ -928,7 +928,7 @@ async def generate_all_video_clips(
     v2.0 改动：
     - 默认使用 Kling Omni 批量模式（use_omni_batch=True）
     - 每批最多6个分镜，大幅减少 API 调用次数
-    - 回退策略：Omni 失败 → 逐个 v3 i2v → Seedance
+    - 回退策略：Omni 失败 → 逐个 v3 i2v → Volces
 
     Returns:
         {scene_id: video_path} 字典
