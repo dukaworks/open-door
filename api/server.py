@@ -493,7 +493,7 @@ async def run_workflow(project_id: str, request: CreateProjectRequest, user_id: 
         request: 创建项目请求
         user_id: 用户ID（用于从数据库读取用户配置）
     """
-    """
+
     # 每次新任务开始时重置图像模型黑名单，避免上次任务的失败影响本次
     from modules.image_gen import reset_failed_models
 
